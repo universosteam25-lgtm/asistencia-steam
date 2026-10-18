@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#9C88FF">
     <meta name="mobile-web-app-capable" content="yes">
@@ -964,7 +965,7 @@ body{--bp:20px;--pl:max(var(--bp),env(safe-area-inset-left,0px));--pr:max(var(--
 .sc-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:8px 0;font-size:12px}
 .sc-tag{display:inline-flex;gap:6px;align-items:center;background:#E8FAEB;border:1px solid #B5EAD7;color:#2D7A5D;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;margin:4px 4px 0 0}.sc-tag b{cursor:pointer;color:#C0392B}
 .gdrop{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#F8F6FF;border:1px dashed #E0D9FF;border-radius:14px}.gsubrow{background:#E8FBF9;border:1px dashed #5FD1D3;margin-left:14px;flex-basis:calc(100% - 14px)}.gsubrow .gsep{color:#0E8F8A;font-family:'Fredoka',sans-serif;font-size:12px;font-weight:600}.gchip.sub{background:#fff;color:#0E8F8A;border:2px dashed #5FD1D3}.gchip.sub:hover{background:#E8FBF9}.gchip.sub.on{background:#5FD1D3;color:#fff;border:2px solid #5FD1D3}
-body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
+body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}#cfModal,#typedModal{z-index:100000!important}#lockToast{z-index:100001!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
 </style>
 </head>
 <body>
@@ -2514,7 +2515,7 @@ function payRefresh(){let n=0;Object.keys(CL.premote).forEach(id=>{n+=applyPay(i
   if(n||CL.pch){CL.pch=0;_sl();refreshAfter();try{if($('payModal').classList.contains('show'))renderPay();}catch(e){}}return n;}
 function snapPay(snap){
   snap.docChanges().forEach(c=>{const id=c.doc.id,pend=c.doc.metadata.hasPendingWrites;
-    if(c.type==='removed'){if(!pend){delete CL.premote[id];delete CL.pdoc[id];delete CL.psig[id];}return;}
+    if(c.type==='removed'){if(!pend){delete CL.premote[id];delete CL.pdoc[id];delete CL.psig[id];if(id.slice(0,2)==='p_'){const pid=id.slice(2),L=(appData.pagosAnul||[]).length;appData.pagosAnul=(appData.pagosAnul||[]).filter(x=>String(x.id)!==pid);if(L!==appData.pagosAnul.length)CL.pch=1;}}return;}
     CL.pdoc[id]=1;if(pend)return;CL.premote[id]=c.doc.data();});
   payRefresh();mark('$pay',snap);}
 function cloudPush(){if(!CL.on)return;clearTimeout(CL.t);CL.t=setTimeout(doPush,400);}
@@ -2600,9 +2601,14 @@ delPay=function(pid){const p0=appData.pagos.find(x=>x.id===pid);if(!p0)return;
   appConfirm('¿Anular el pago de '+p0.name+' por '+money(p0.amount)+'? No se elimina: queda guardado en «Pagos anulados» y lo puedes restaurar.',()=>{
     appData.pagos=appData.pagos.filter(x=>x.id!==pid);appData.pagosAnul.push(Object.assign({},p0,{voidT:Date.now(),mt:Date.now()}));recalcPaid(p0.sid);afterPay();},'Sí, anular',{i:'🧾',t:'Anular pago',w:'No se borra nada; se puede restaurar.',g:1});};
 function restorePay(pid){const p=appData.pagosAnul.find(x=>x.id===pid);if(!p)return;appData.pagosAnul=appData.pagosAnul.filter(x=>x.id!==pid);const q=Object.assign({},p,{mt:Date.now()});delete q.voidT;appData.pagos.push(q);recalcPaid(q.sid);afterPay();showLockToast('✅ Pago restaurado');}
+function delPayForever(pid){const p=appData.pagosAnul.find(x=>x.id===pid);if(!p)return;
+  appConfirm('¿Eliminar DEFINITIVAMENTE el pago anulado de '+p.name+' por '+money(p.amount)+'? Esta acción no se puede deshacer.',()=>{
+    appData.pagosAnul=appData.pagosAnul.filter(x=>x.id!==pid);delete CL.psig['p_'+pid];delete CL.premote['p_'+pid];delete CL.pdoc['p_'+pid];
+    if(CL.on&&CL.db)CL.db.doc('admin_pay/p_'+pid).delete().catch(cloudErr);
+    saveLocalData();afterPay();showLockToast('🗑️ Pago anulado eliminado');},'Sí, eliminar',{i:'🗑️',t:'Eliminar pago anulado',w:'Esta acción no se puede deshacer.'});}
 $('pxList').insertAdjacentHTML('afterend','<div id="pxAnul"></div>');
 const _rp=renderPay;renderPay=function(){_rp();const L=(appData.pagosAnul||[]).filter(pagoOk).sort((a,b)=>b.voidT-a.voidT);
-  $('pxAnul').innerHTML=L.length?'<h4 class="en-h">🧾 Pagos anulados (guardados)</h4>'+L.map(p=>'<div class="px-row"><span><s>'+esc(p.name)+' · '+money(p.amount)+' · '+esc(p.date)+'</s><br><span class="px-hint">Anulado el '+new Date(p.voidT).toLocaleDateString('es-CO')+'</span></span><button class="modal-btn modal-btn-cancel" onclick="restorePay('+p.id+')">↩️ Restaurar</button></div>').join(''):'';};
+  $('pxAnul').innerHTML=L.length?'<h4 class="en-h">🧾 Pagos anulados (guardados)</h4>'+L.map(p=>'<div class="px-row"><span><s>'+esc(p.name)+' · '+money(p.amount)+' · '+esc(p.date)+'</s><br><span class="px-hint">Anulado el '+new Date(p.voidT).toLocaleDateString('es-CO')+'</span></span><button class="modal-btn modal-btn-cancel" onclick="restorePay('+p.id+')">↩️ Restaurar</button> <button class="btn-pend-del" onclick="delPayForever('+p.id+')">🗑️ Eliminar</button></div>').join(''):'';};
 /* ---- Estudiantes: eliminar exige confirmar y deja copia en la nube ---- */
 const _ds3=deleteStudent;
 deleteStudent=function(id){
@@ -2696,7 +2702,8 @@ const genCode=()=>{const a=new Uint8Array(12);crypto.getRandomValues(a);let s=''
 const b64bytes=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
 document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="gamesModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">🎮 Juegos</h3><button class="mx" onclick="closeM(\'gamesModal\')">✖️</button></div><div id="gmBody"></div></div></div>');
 $('gamesModal').addEventListener('click',e=>{if(e.target.id==='gamesModal')closeM('gamesModal');});
-function openGames(){$('gamesModal').classList.add('show');drawGames();}
+let GM_ALL=false;
+function openGames(){GM_ALL=false;$('gamesModal').classList.add('show');drawGames();}
 const gState=c=>c.status==='revoked'?'⛔ Desactivado':(c.uid?'📱 Activo en 1 dispositivo · '+new Date(c.claimedAt||0).toLocaleDateString('es-CO'):'🟢 Libre');
 async function drawGames(){
   const B=$('gmBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let kd,cs;
@@ -2704,14 +2711,14 @@ async function drawGames(){
   catch(e){B.innerHTML='<div class="px-row late"><span>⛔ '+esc(e.code||e.message)+' — revisa que las reglas de Firestore estén actualizadas y que el acceso anónimo esté activado.</span></div>';return;}
   const L=[];cs.forEach(d=>L.push([d.id,d.data()]));L.sort((a,b)=>(b[1].created||0)-(a[1].created||0));
   B.innerHTML=(kd.exists?'<div class="px-row ok"><span>🔑 Clave de los juegos guardada</span></div>':'<div class="px-row late"><span>⚠️ Falta la clave de los juegos</span></div><p class="px-hint">Pega la clave del archivo CLAVE_JUEGOS (una sola vez).</p><div class="en-grid">'+fld('gmK','Clave','text')+'</div><button class="modal-btn modal-btn-save" onclick="saveGameKey()">Guardar clave</button>')
-  +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 100)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
-  +'<h4 class="en-h">🎟️ Códigos ('+L.length+')</h4>'+(L.length?L.map(([id,c])=>'<div class="px-row"><span><b style="user-select:all">'+esc(id)+'</b> · '+esc(c.label||'sin etiqueta')+'<br><span class="px-hint">'+gState(c)+' · liberaciones '+(c.rel||0)+'/'+(c.maxRel||2)+'</span></span><span>'+(c.uid&&c.status!=='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="relCode(\''+id+'\')">🔓 Liberar</button> ':'')+(c.status==='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'active\')">↩️ Reactivar</button>':'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'revoked\')">⛔ Desactivar</button>')+'</span></div>').join(''):'<div class="px-hint">Aún no hay códigos.</div>')
+  +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 3)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
+  +'<h4 class="en-h">🎟️ Códigos ('+L.length+')</h4>'+(L.filter(([,c])=>!c.uid).length?'<button class="modal-btn modal-btn-cancel" onclick="delFreeCodes()">🧹 Eliminar todos los códigos libres ('+L.filter(([,c])=>!c.uid).length+')</button>':'')+(L.length?L.slice(0,GM_ALL?L.length:50).map(([id,c])=>'<div class="px-row"><span><b style="user-select:all">'+esc(id)+'</b> · '+esc(c.label||'sin etiqueta')+'<br><span class="px-hint">'+gState(c)+' · liberaciones '+(c.rel||0)+'/'+(c.maxRel||2)+'</span></span><span>'+(c.uid&&c.status!=='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="relCode(\''+id+'\')">🔓 Liberar</button> ':'')+(c.status==='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'active\')">↩️ Reactivar</button>':'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'revoked\')">⛔ Desactivar</button>')+' <button class="btn-pend-del" onclick="delCode(\''+id+'\')">🗑️ Eliminar</button></span></div>').join('')+(!GM_ALL&&L.length>50?'<button class="modal-btn modal-btn-cancel" onclick="GM_ALL=true;drawGames()">Mostrar todos ('+L.length+')</button>':''):'<div class="px-hint">Aún no hay códigos.</div>')
   +'<h4 class="en-h">🔒 Cifrar un juego nuevo</h4><p class="px-hint">Elige el archivo HTML del juego. Se descarga cifrado (.enc) para subirlo a la carpeta <b>juegos/games</b> de GitHub, junto con la línea que debes agregar a <b>catalog.json</b>.</p><input type="file" id="gmF" accept=".html,.htm,text/html"><div class="en-grid">'+fld('gmId','Nombre corto del juego (opcional)','text')+'</div><button class="modal-btn modal-btn-save" onclick="encGame()">🔒 Cifrar y descargar</button><div id="gmEnc"></div>';
 }
 async function saveGameKey(){const k=$('gmK').value.trim();try{if(b64bytes(k).length!==32)throw 0;}catch(e){showLockToast('⚠️ La clave no es válida');return;}
   try{await CL.db.doc('gamekey/master').set({k});showLockToast('✅ Clave guardada');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
 async function mkCodes(){
-  const n=Math.max(1,Math.min(100,parseInt($('gmN').value)||1)),lab=$('gmL').value.trim(),Bt=CL.db.batch(),out=[];
+  const n=Math.max(1,Math.min(3,parseInt($('gmN').value)||1)),lab=$('gmL').value.trim(),Bt=CL.db.batch(),out=[];
   for(let i=0;i<n;i++){const c=genCode();out.push(c);Bt.set(CL.db.doc('codes/'+c),{label:lab,status:'active',uid:null,claimedAt:null,rel:0,maxRel:2,created:Date.now()});}
   try{await Bt.commit();}catch(e){showLockToast('⚠️ '+(e.code||e.message));return;}
   const txt=out.join('\n');window._gmCsv='Código,Etiqueta\n'+out.map(c=>c+',"'+lab.replace(/"/g,'""')+'"').join('\n');
@@ -2721,6 +2728,12 @@ const drawGamesList=async()=>{try{const cs=await CL.db.collection('codes').get()
 function dlBlob(data,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},600);}
 function relCode(code){appConfirm('¿Liberar el código '+code+'? Dejará de funcionar en su dispositivo actual y podrá activarse en otro.',async()=>{
   try{const d=await CL.db.doc('codes/'+code).get(),c=d.data(),Bt=CL.db.batch();Bt.update(CL.db.doc('codes/'+code),{uid:null,claimedAt:null,rel:(c.rel||0)+1});if(c.uid)Bt.delete(CL.db.doc('licenses/'+c.uid));await Bt.commit();showLockToast('✅ Código liberado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}},'Sí, liberar',{i:'🔓',t:'Liberar código',w:'Úsalo cuando la familia cambió de dispositivo.',g:1});}
+function delCode(code){appConfirm('¿Eliminar el código '+code+' por completo? Si una familia lo tenía activo, perderá el acceso.',async()=>{
+  try{const d=await CL.db.doc('codes/'+code).get(),c=d.exists?d.data():{},Bt=CL.db.batch();Bt.delete(CL.db.doc('codes/'+code));if(c.uid)Bt.delete(CL.db.doc('licenses/'+c.uid));await Bt.commit();showLockToast('🗑️ Código eliminado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}},'Sí, eliminar',{i:'🗑️',t:'Eliminar código',w:'Esta acción no se puede deshacer.'});}
+async function delFreeCodes(){
+  const cs=await CL.db.collection('codes').get(),F=[];cs.forEach(d=>{if(!d.data().uid)F.push(d.id);});if(!F.length)return;
+  askTyped('Vas a eliminar '+F.length+' código(s) que nadie ha activado. Los códigos que ya están en uso no se tocan. Escribe ELIMINAR para confirmar:','ELIMINAR',async()=>{
+    try{for(let i=0;i<F.length;i+=400){const Bt=CL.db.batch();F.slice(i,i+400).forEach(c=>Bt.delete(CL.db.doc('codes/'+c)));await Bt.commit();}showLockToast('🗑️ '+F.length+' código(s) eliminados');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}});}
 async function setCodeSt(code,st){try{await CL.db.doc('codes/'+code).update({status:st});showLockToast(st==='active'?'✅ Código reactivado':'⛔ Código desactivado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
 async function encGame(){
   const f=$('gmF').files[0];if(!f){showLockToast('⚠️ Elige primero el archivo del juego');return;}

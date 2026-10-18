@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Universo STEAM · Juegos</title>
+<title>Juegos Universo STEAM · Juegos educativos de matemáticas para niños</title>
+<meta name="description" content="Juegos educativos de Universo STEAM para niños: tablas de multiplicar con los dedos, sumas, restas, multiplicaciones, divisiones y números romanos. Funcionan sin internet.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://universosteam25-lgtm.github.io/asistencia-steam/juegos/">
+<meta property="og:type" content="website"><meta property="og:locale" content="es_CO"><meta property="og:site_name" content="Universo STEAM">
+<meta property="og:title" content="Juegos Universo STEAM · Juegos educativos para niños">
+<meta property="og:description" content="Tablas de multiplicar, operaciones básicas y números romanos en juegos para niños. Se instalan y funcionan sin internet.">
+<meta property="og:url" content="https://universosteam25-lgtm.github.io/asistencia-steam/juegos/">
+<meta property="og:image" content="https://universosteam25-lgtm.github.io/asistencia-steam/juegos/icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#9C88FF">
 <meta name="mobile-web-app-capable" content="yes">
@@ -192,6 +200,11 @@ label.t{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:6
     <button class="btn" id="bAct">Activar</button>
     <div class="err" id="actErr"></div>
   </div>
+  <div class="card">
+    <h2>Juegos educativos para niños</h2>
+    <p class="hint">Universo STEAM · Taller de Tareas crea juegos para aprender matemáticas jugando. Con un solo código tu familia disfruta todos los juegos, y se instalan en el celular, la tablet o el computador para usarlos también sin internet.</p>
+    <ul class="hint" style="padding-left:20px;margin:0"><li><b>¡Magia con tus Dedos!</b>: Aprende las tablas del 1 al 10 usando tus manos.</li><li><b>Aventura Matemática</b>: Practica sumas, restas, multiplicaciones y divisiones, con modo aventura y modo misterio.</li><li><b>OctoChef: Números Romanos</b>: Ayuda al pulpo chef a leer y escribir números romanos y gana monedas para sus accesorios.</li></ul>
+  </div>
   <p class="hint" style="text-align:center">¿Aún no tienes un código? Pídelo en Universo STEAM.</p>
 </section>
 
@@ -206,12 +219,12 @@ label.t{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:6
     <p class="hint" id="dl" style="margin:8px 0 0"></p>
     <p class="hint" style="margin:8px 0 0">Código activo en este dispositivo: <span class="pill" id="lcode"></span></p>
   </div>
-  <div class="card" id="dona" hidden>
-    <h2>💜 Apoya el taller</h2>
-    <p class="hint" id="donaTxt"></p>
-    <div id="donaBox"></div>
-  </div>
 </section>
+<div class="card" id="dona">
+  <h2>💜 Apoya el taller</h2>
+  <p class="hint" id="donaTxt"></p>
+  <div id="donaBox"></div>
+</div>
 <p class="hint" style="text-align:center;margin-top:18px">© Universo STEAM · Taller de Tareas</p>
 </main>
 
@@ -227,7 +240,7 @@ label.t{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:6
 (function(){
 const CFG={apiKey:"AIzaSyBZXPso82OVPBHlDx-E0Fnbl7opWGX6Vvc",authDomain:"asistencia-steam-be075.firebaseapp.com",projectId:"asistencia-steam-be075",storageBucket:"asistencia-steam-be075.firebasestorage.app",messagingSenderId:"566010898493",appId:"1:566010898493:web:7992ba62382c74fd47a254"};
 const LS='steamjuegos_lic',OFFLINE_DAYS=45,CACHE='steam-juegos-v1';
-const DONA={breb:'',vaki:'',nota:''};   /* se completan cuando esté lista la parte financiera */
+const DONA={nequi:'',breb:'@NEQUIJHE517',vaki:'',nota:'Tu aporte es voluntario y ayuda a comprar materiales y premios, y a apoyar becas del taller.'};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const b64u8=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
@@ -284,10 +297,15 @@ function renderLib(){
   $('grid').innerHTML=CAT.map((g,i)=>'<div class="g"><div class="e" style="background:'+esc(g.color||'#9C88FF')+'22">'+esc(g.emoji||'🎮')+'</div><h3>'+esc(g.title)+'</h3><p>'+esc(g.desc||'')+'</p><button class="btn" data-i="'+i+'">▶ Jugar</button></div>').join('')||'<div class="card hint">Pronto habrá juegos aquí.</div>';
   $('grid').querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>play(CAT[+b.dataset.i]));
   $('lcode').textContent='••••-••••-'+lic.code.slice(-4);
-  const D=DONA;$('dona').hidden=false;
-  if(D.breb||D.vaki){$('donaTxt').textContent=D.nota||'Tu aporte voluntario ayuda a comprar materiales, premios y becas para el taller.';
-    $('donaBox').innerHTML=(D.breb?'<p class="hint">Llave Bre-B: <span class="pill">'+esc(D.breb)+'</span></p>':'')+(D.vaki?'<a class="btn alt" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="'+esc(D.vaki)+'">Aportar</a>':'');}
-  else{$('donaTxt').textContent='Muy pronto podrás aportar para materiales, premios y becas del taller.';$('donaBox').innerHTML='';}
+}
+function renderDona(){
+  const D=DONA;$('donaTxt').textContent=D.nota||'';let h='';
+  if(D.breb)h+='<p class="hint">Por <b>Bre-B</b> (desde cualquier banco o billetera), paga a la llave: <span class="pill" style="font-size:17px">'+esc(D.breb)+'</span></p><button class="btn alt" id="cpBreb">📋 Copiar llave Bre-B</button>';
+  if(D.nequi)h+='<p class="hint" style="margin-top:14px">O por <b>Nequi</b>, envía al número: <span class="pill" style="font-size:17px">'+esc(D.nequi.replace(/(\d{3})(\d{3})(\d{4})/,'$1 $2 $3'))+'</span></p><button class="btn ghost" id="cpNeq">📋 Copiar número</button>';
+  if(D.vaki)h+='<a class="btn alt" style="text-decoration:none;text-align:center;margin-top:12px" target="_blank" rel="noopener" href="'+esc(D.vaki)+'">Aportar</a>';
+  if(!h)h='<p class="hint">Muy pronto podrás aportar.</p>';
+  $('donaBox').innerHTML=h;
+  [['cpBreb',D.breb,'✅ Llave copiada'],['cpNeq',D.nequi,'✅ Número copiado']].forEach(([id,v,ok])=>{const c=$(id);if(c)c.onclick=async()=>{try{await navigator.clipboard.writeText(v);c.textContent=ok;}catch(e){prompt('Copia aquí:',v);}};});
 }
 function enter(){view('lib');renderLib();revalidate();prefetch();}
 async function decrypt(buf,kb64){
@@ -316,6 +334,7 @@ $('inst').onclick=async()=>{if(deferred){deferred.prompt();deferred=null;$('inst
 addEventListener('appinstalled',()=>{$('inst').hidden=true;});
 if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!matchMedia('(display-mode: standalone)').matches)$('iosHint').hidden=false;
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+renderDona();
 (async function init(){
   try{CAT=await (await fetch('games/catalog.json')).json();}catch(e){CAT=[];}
   if(typeof firebase!=='undefined'){try{const a=firebase.initializeApp(CFG,'juegos');auth=a.auth();db=a.firestore();}catch(e){}}
