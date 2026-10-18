@@ -2689,6 +2689,51 @@ function archAct(id,arch){const a=actAll()[id];if(!a)return;
 (function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='💡 Actividades';b.onclick=openAct;t.parentNode.insertBefore(b,t);})();
 try{ensurePay();}catch(e){}
 </script>
+<script>
+/* ===== Juegos: códigos, clave y cifrado (solo Principal Admin) ===== */
+const GALPH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode=()=>{const a=new Uint8Array(12);crypto.getRandomValues(a);let s='';a.forEach(x=>s+=GALPH[x%31]);return s.replace(/(.{4})(?=.)/g,'$1-');};
+const b64bytes=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="gamesModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">🎮 Juegos</h3><button class="mx" onclick="closeM(\'gamesModal\')">✖️</button></div><div id="gmBody"></div></div></div>');
+$('gamesModal').addEventListener('click',e=>{if(e.target.id==='gamesModal')closeM('gamesModal');});
+function openGames(){$('gamesModal').classList.add('show');drawGames();}
+const gState=c=>c.status==='revoked'?'⛔ Desactivado':(c.uid?'📱 Activo en 1 dispositivo · '+new Date(c.claimedAt||0).toLocaleDateString('es-CO'):'🟢 Libre');
+async function drawGames(){
+  const B=$('gmBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let kd,cs;
+  try{kd=await CL.db.doc('gamekey/master').get();cs=await CL.db.collection('codes').get();}
+  catch(e){B.innerHTML='<div class="px-row late"><span>⛔ '+esc(e.code||e.message)+' — revisa que las reglas de Firestore estén actualizadas y que el acceso anónimo esté activado.</span></div>';return;}
+  const L=[];cs.forEach(d=>L.push([d.id,d.data()]));L.sort((a,b)=>(b[1].created||0)-(a[1].created||0));
+  B.innerHTML=(kd.exists?'<div class="px-row ok"><span>🔑 Clave de los juegos guardada</span></div>':'<div class="px-row late"><span>⚠️ Falta la clave de los juegos</span></div><p class="px-hint">Pega la clave del archivo CLAVE_JUEGOS (una sola vez).</p><div class="en-grid">'+fld('gmK','Clave','text')+'</div><button class="modal-btn modal-btn-save" onclick="saveGameKey()">Guardar clave</button>')
+  +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 100)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
+  +'<h4 class="en-h">🎟️ Códigos ('+L.length+')</h4>'+(L.length?L.map(([id,c])=>'<div class="px-row"><span><b style="user-select:all">'+esc(id)+'</b> · '+esc(c.label||'sin etiqueta')+'<br><span class="px-hint">'+gState(c)+' · liberaciones '+(c.rel||0)+'/'+(c.maxRel||2)+'</span></span><span>'+(c.uid&&c.status!=='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="relCode(\''+id+'\')">🔓 Liberar</button> ':'')+(c.status==='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'active\')">↩️ Reactivar</button>':'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'revoked\')">⛔ Desactivar</button>')+'</span></div>').join(''):'<div class="px-hint">Aún no hay códigos.</div>')
+  +'<h4 class="en-h">🔒 Cifrar un juego nuevo</h4><p class="px-hint">Elige el archivo HTML del juego. Se descarga cifrado (.enc) para subirlo a la carpeta <b>juegos/games</b> de GitHub, junto con la línea que debes agregar a <b>catalog.json</b>.</p><input type="file" id="gmF" accept=".html,.htm,text/html"><div class="en-grid">'+fld('gmId','Nombre corto del juego (opcional)','text')+'</div><button class="modal-btn modal-btn-save" onclick="encGame()">🔒 Cifrar y descargar</button><div id="gmEnc"></div>';
+}
+async function saveGameKey(){const k=$('gmK').value.trim();try{if(b64bytes(k).length!==32)throw 0;}catch(e){showLockToast('⚠️ La clave no es válida');return;}
+  try{await CL.db.doc('gamekey/master').set({k});showLockToast('✅ Clave guardada');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+async function mkCodes(){
+  const n=Math.max(1,Math.min(100,parseInt($('gmN').value)||1)),lab=$('gmL').value.trim(),Bt=CL.db.batch(),out=[];
+  for(let i=0;i<n;i++){const c=genCode();out.push(c);Bt.set(CL.db.doc('codes/'+c),{label:lab,status:'active',uid:null,claimedAt:null,rel:0,maxRel:2,created:Date.now()});}
+  try{await Bt.commit();}catch(e){showLockToast('⚠️ '+(e.code||e.message));return;}
+  const txt=out.join('\n');window._gmCsv='Código,Etiqueta\n'+out.map(c=>c+',"'+lab.replace(/"/g,'""')+'"').join('\n');
+  $('gmNew').innerHTML='<div class="px-row ok"><span>✅ '+n+' código(s) creados. Cópialos ahora y entrégalos:</span></div><textarea rows="'+Math.min(8,n+1)+'" style="width:100%;box-sizing:border-box;border:2px solid #E0D9FF;border-radius:14px;padding:10px;font-family:monospace" readonly onclick="this.select()">'+esc(txt)+'</textarea><button class="modal-btn modal-btn-cancel" onclick="dlBlob(window._gmCsv,\'codigos-juegos.csv\',\'text/csv\')">⬇️ Descargar CSV</button>';
+  drawGamesList();}
+const drawGamesList=async()=>{try{const cs=await CL.db.collection('codes').get();const keep=$('gmNew').innerHTML;await drawGames();$('gmNew').innerHTML=keep;}catch(e){}};
+function dlBlob(data,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},600);}
+function relCode(code){appConfirm('¿Liberar el código '+code+'? Dejará de funcionar en su dispositivo actual y podrá activarse en otro.',async()=>{
+  try{const d=await CL.db.doc('codes/'+code).get(),c=d.data(),Bt=CL.db.batch();Bt.update(CL.db.doc('codes/'+code),{uid:null,claimedAt:null,rel:(c.rel||0)+1});if(c.uid)Bt.delete(CL.db.doc('licenses/'+c.uid));await Bt.commit();showLockToast('✅ Código liberado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}},'Sí, liberar',{i:'🔓',t:'Liberar código',w:'Úsalo cuando la familia cambió de dispositivo.',g:1});}
+async function setCodeSt(code,st){try{await CL.db.doc('codes/'+code).update({status:st});showLockToast(st==='active'?'✅ Código reactivado':'⛔ Código desactivado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+async function encGame(){
+  const f=$('gmF').files[0];if(!f){showLockToast('⚠️ Elige primero el archivo del juego');return;}
+  try{
+    const kd=await CL.db.doc('gamekey/master').get();if(!kd.exists){showLockToast('⚠️ Falta guardar la clave de los juegos');return;}
+    const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,await f.arrayBuffer())),out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);
+    const id=(($('gmId').value.trim()||f.name.replace(/\.html?$/i,'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''))+'-v1';
+    dlBlob(out,id+'.enc','application/octet-stream');
+    $('gmEnc').innerHTML='<div class="px-row ok"><span>✅ Descargado <b>'+esc(id)+'.enc</b>. Súbelo a <b>juegos/games/</b> y agrega esta línea a <b>catalog.json</b> (completa título y descripción):</span></div><textarea rows="3" style="width:100%;box-sizing:border-box;border:2px solid #E0D9FF;border-radius:14px;padding:10px;font-family:monospace" readonly onclick="this.select()">'+esc(JSON.stringify({id,title:'',desc:'',emoji:'🎮',color:'#9C88FF',file:id+'.enc'}))+'</textarea>';
+  }catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+if(!COLAB_BUILD)(function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='🎮 Juegos';b.onclick=openGames;t.parentNode.insertBefore(b,t);})();
+</script>
 <div id="lockToast">🔒 Activa "Editar" para modificar la asistencia</div>
 </body>
 </html>
