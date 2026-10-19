@@ -965,10 +965,10 @@ body{--bp:20px;--pl:max(var(--bp),env(safe-area-inset-left,0px));--pr:max(var(--
 .sc-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:8px 0;font-size:12px}
 .sc-tag{display:inline-flex;gap:6px;align-items:center;background:#E8FAEB;border:1px solid #B5EAD7;color:#2D7A5D;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;margin:4px 4px 0 0}.sc-tag b{cursor:pointer;color:#C0392B}
 .gdrop{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#F8F6FF;border:1px dashed #E0D9FF;border-radius:14px}.gsubrow{background:#E8FBF9;border:1px dashed #5FD1D3;margin-left:14px;flex-basis:calc(100% - 14px)}.gsubrow .gsep{color:#0E8F8A;font-family:'Fredoka',sans-serif;font-size:12px;font-weight:600}.gchip.sub{background:#fff;color:#0E8F8A;border:2px dashed #5FD1D3}.gchip.sub:hover{background:#E8FBF9}.gchip.sub.on{background:#5FD1D3;color:#fff;border:2px solid #5FD1D3}
-body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}#cfModal,#typedModal{z-index:100000!important}#lockToast{z-index:100001!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
+body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.gated>*:not(#cloudModal):not(#lockToast){display:none!important}body.gated{background:#F8F6FF}#cfModal,#typedModal{z-index:100000!important}#lockToast{z-index:100001!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
 </style>
 </head>
-<body>
+<body class="gated">
 <div class="top-bar"></div>
 
     <!-- Header Box -->
@@ -2429,13 +2429,13 @@ function bundleOf(s){const o={};for(const k in s)if(!PAYF.includes(k)&&k!=='orde
 const refreshAfter=()=>{renderTable();if(isColab())$('gradeGroup').value=appData.grade||'';try{updateNotesBadge();updatePendingsBadge();}catch(e){}};
 const cloudErr=e=>{console.error(e);try{checkRevoked(e);}catch(z){}CL.sig={};CL.err=((e&&e.code)||'')+' '+String((e&&e.message)||'').slice(0,160);setChip('⚠️ Nube: '+((e&&e.code)||'error'));};
 function cloudInit(){
-  if(!cloudOK()){setChip('☁️ Sin nube');return;}
+  if(!cloudOK()){setChip('☁️ Sin nube');openCloud();return;}
   try{const fa=firebase.initializeApp(FB_CONFIG,COLAB_BUILD?'docente':'admin');CL.auth=fa.auth();try{CL.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});}catch(e){}CL.db=fa.firestore();try{CL.db.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){}CL.db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(e){setChip('☁️ Sin nube');return;}
   CL.checking=true;openCloud();CL.auth.onAuthStateChanged(u=>{CL.checking=false;if(u)cloudStart(u);else{cloudStop();openCloud();}});
   window.addEventListener('offline',()=>CL.on&&setChip('☁️ Sin internet (se guarda aquí)'));
   window.addEventListener('online',()=>{if(CL.on){setChip('☁️ Sincronizando…');cloudPush();}});
 }
-function cloudStop(){Object.values(CL.unsub).forEach(f=>f());Object.assign(CL,{on:false,ready:false,sig:{},path:{},gs:{},unsub:{},init:{},pdoc:{},psig:{},premote:{}});try{actStop();}catch(e){}outBtn(false);setChip('☁️ Iniciar sesión');}
+function cloudStop(){Object.values(CL.unsub).forEach(f=>f());Object.assign(CL,{on:false,ready:false,sig:{},path:{},gs:{},unsub:{},init:{},pdoc:{},psig:{},premote:{}});try{actStop();}catch(e){}outBtn(false);document.body.classList.add('gated');setChip('☁️ Iniciar sesión');}
 function cloudFail(m){CL.msg=m;CL.auth.signOut();drawCloud();$('cloudModal').classList.add('show');}
 async function cloudStart(u){
   setChip('☁️ Conectando…');CL.msg='';let m;
@@ -2455,7 +2455,7 @@ async function cloudStart(u){
       ensurePay();initSnap();_sl();reloadUI();
     }
   }
-  CL.on=true;CL.ready=false;listen();try{actListen();}catch(e){}outBtn(true);setChip('☁️ Sincronizando…');drawCloud();closeM('cloudModal');clearTimeout(CL.w);CL.w=setTimeout(()=>{if(!(CL.on&&!CL.ready))return;CL.db.doc('members/'+CL.auth.currentUser.uid).get({source:'server'}).then(()=>{if(CL.on&&!CL.ready){CL.ready=true;CL.err='';cloudPush();}}).catch(()=>{CL.err='El servidor no respondió a la lectura inicial (12 s).';setChip('⚠️ Sin respuesta de la nube');});},12000);
+  CL.on=true;CL.ready=false;listen();try{actListen();}catch(e){}outBtn(true);setChip('☁️ Sincronizando…');drawCloud();closeM('cloudModal');document.body.classList.remove('gated');clearTimeout(CL.w);CL.w=setTimeout(()=>{if(!(CL.on&&!CL.ready))return;CL.db.doc('members/'+CL.auth.currentUser.uid).get({source:'server'}).then(()=>{if(CL.on&&!CL.ready){CL.ready=true;CL.err='';cloudPush();}}).catch(()=>{CL.err='El servidor no respondió a la lectura inicial (12 s).';setChip('⚠️ Sin respuesta de la nube');});},12000);
 }
 function listen(){
   const adm=CL.role==='admin',want=new Set(adm?appData.groups.map(g=>String(g.id)):[CL.gid]);
@@ -2539,7 +2539,7 @@ const _ds=deleteStudent;deleteStudent=function(id){if(isColab()&&CL.on){showLock
 /* Ventana de conexión */
 document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="cloudModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">☁️ Conexión en la nube</h3><button class="mx" onclick="closeCloud()">✖️</button></div><div id="cloudBody"></div></div></div>');
 $('cloudModal').addEventListener('click',e=>{if(e.target.id==='cloudModal')closeCloud();});
-function closeCloud(){if(cloudOK()&&!CL.on)return;closeM('cloudModal');}
+function closeCloud(){if(!CL.on)return;closeM('cloudModal');}
 function openCloud(){drawCloud();$('cloudModal').classList.add('show');}
 const credInner=()=>'<p class="px-hint">Correos y contraseñas de tus docentes, ocultos. Para verlos escribe tu contraseña de Principal Admin.</p><div class="en-grid">'+fld('cvP','Tu contraseña','password')+'</div><button class="modal-btn modal-btn-save" onclick="revealCreds()">👁️ Mostrar accesos</button>';
 const credBlock=()=>'<h4 class="en-h">🔐 Accesos de los docentes</h4><div id="credBox">'+credInner()+'</div>';
@@ -2547,12 +2547,12 @@ const accessForm=()=>(appData.groups.length?'<h4 class="en-h">👩‍🏫 Crear 
 const dg=()=>'<details style="margin-top:12px"><summary class="px-hint" style="cursor:pointer">Detalles técnicos</summary><div class="px-hint" style="user-select:text;word-break:break-all">Estado: '+(CL.on?'conectado':'sin conexión a la nube')+' · listo: '+(CL.ready?'sí':'no')+' · pendientes: '+(CL.pend||0)+' · internet: '+(navigator.onLine?'sí':'no')+'<br>Último error: '+esc(CL.err||'ninguno')+'<br>Página: '+esc(location.protocol+'//'+location.host)+'</div></details>';
 function drawCloud(){
   const u=cloudOK()&&CL.auth&&CL.auth.currentUser;let h=CL.msg?'<div class="px-row late"><span>⛔ '+esc(CL.msg)+'</span></div>':'';
-  if(!cloudOK())h='<div class="px-row late"><span>No se pudo cargar Firebase (¿sin internet?). La app sigue funcionando en este dispositivo.</span></div>';
+  if(!cloudOK())h='<div class="px-row late"><span>No se pudo cargar el servicio de acceso (¿sin internet?). Conéctate para iniciar sesión.</span></div><div class="px-hint" style="margin-top:8px"><a href="../">← Volver al inicio</a></div>';
   else if(CL.checking)h+='<div class="px-row wait"><span>Verificando sesión…</span></div>';
   else if(u&&CL.on){h+='<div class="px-row ok"><span>✅ Sesión: <b>'+esc(u.email)+'</b> · '+(CL.role==='admin'?'Principal Admin':'Docente')+'</span></div><p class="px-hint">Los cambios se envían y reciben solos. Sin internet, se guardan aquí y se envían al volver la conexión.</p>'+(CL.role==='admin'?accessForm():'')+'<button class="modal-btn modal-btn-cancel" style="margin-top:10px" onclick="cloudOut()">Cerrar sesión</button>';}
   else if(u)h+='<div class="px-row wait"><span>Conectando…</span></div>';
   else h+='<p class="px-hint">Entra con tu correo y contraseña para sincronizar. Sin sesión, la app funciona solo en este dispositivo.</p>'+fld('lgE','Correo','email')+fld('lgP','Contraseña','password')+'<div class="modal-buttons"><button class="modal-btn modal-btn-save" onclick="cloudIn()">Entrar</button></div><div class="px-hint" style="margin-top:8px"><a href="../">← Volver al inicio</a></div>'+(COLAB_BUILD?'':'<div class="px-hint" style="margin-top:8px">¿Primera vez como Principal Admin? <a href="#" onclick="cloudSignUp();return false">Crear mi cuenta con este correo y contraseña</a></div>');
-  $('cloudBody').innerHTML=h+(cloudOK()?dg():'');{const x=document.querySelector('#cloudModal .mx');if(x)x.style.display=(cloudOK()&&!CL.on)?'none':'';}
+  $('cloudBody').innerHTML=h+(cloudOK()?dg():'');{const x=document.querySelector('#cloudModal .mx');if(x)x.style.display=!CL.on?'none':'';}
 }
 function cloudIn(){CL.msg='';CL.auth.signInWithEmailAndPassword($('lgE').value.trim(),$('lgP').value).catch(e=>{CL.msg='No se pudo entrar: '+(e.code||e.message);drawCloud();});}
 function cloudSignUp(){CL.msg='';CL.auth.createUserWithEmailAndPassword($('lgE').value.trim(),$('lgP').value).catch(e=>{CL.msg='No se pudo crear la cuenta: '+(e.code||e.message);drawCloud();});}

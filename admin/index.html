@@ -965,10 +965,10 @@ body{--bp:20px;--pl:max(var(--bp),env(safe-area-inset-left,0px));--pr:max(var(--
 .sc-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:8px 0;font-size:12px}
 .sc-tag{display:inline-flex;gap:6px;align-items:center;background:#E8FAEB;border:1px solid #B5EAD7;color:#2D7A5D;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;margin:4px 4px 0 0}.sc-tag b{cursor:pointer;color:#C0392B}
 .gdrop{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#F8F6FF;border:1px dashed #E0D9FF;border-radius:14px}.gsubrow{background:#E8FBF9;border:1px dashed #5FD1D3;margin-left:14px;flex-basis:calc(100% - 14px)}.gsubrow .gsep{color:#0E8F8A;font-family:'Fredoka',sans-serif;font-size:12px;font-weight:600}.gchip.sub{background:#fff;color:#0E8F8A;border:2px dashed #5FD1D3}.gchip.sub:hover{background:#E8FBF9}.gchip.sub.on{background:#5FD1D3;color:#fff;border:2px solid #5FD1D3}
-body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}#cfModal,#typedModal{z-index:100000!important}#lockToast{z-index:100001!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
+body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.gated>*:not(#cloudModal):not(#lockToast){display:none!important}body.gated{background:#F8F6FF}#cfModal,#typedModal{z-index:100000!important}#lockToast{z-index:100001!important}body.colab .gm-row:has(#gNew){display:none!important}body.colab .btn-pay,body.colab #payAlerts,body.colab #tabBtnPay,body.colab #tabPay,body.colab #payModal{display:none!important}body.colab label.en-f:has(#enPrice),body.colab label.en-f:has(#enDay){display:none!important}body.colab input[readonly]{background:#F3F0FF;cursor:not-allowed}.gtoggle{max-width:100%}
 </style>
 </head>
-<body>
+<body class="gated">
 <div class="top-bar"></div>
 
     <!-- Header Box -->
@@ -2429,13 +2429,13 @@ function bundleOf(s){const o={};for(const k in s)if(!PAYF.includes(k)&&k!=='orde
 const refreshAfter=()=>{renderTable();if(isColab())$('gradeGroup').value=appData.grade||'';try{updateNotesBadge();updatePendingsBadge();}catch(e){}};
 const cloudErr=e=>{console.error(e);try{checkRevoked(e);}catch(z){}CL.sig={};CL.err=((e&&e.code)||'')+' '+String((e&&e.message)||'').slice(0,160);setChip('⚠️ Nube: '+((e&&e.code)||'error'));};
 function cloudInit(){
-  if(!cloudOK()){setChip('☁️ Sin nube');return;}
+  if(!cloudOK()){setChip('☁️ Sin nube');openCloud();return;}
   try{const fa=firebase.initializeApp(FB_CONFIG,COLAB_BUILD?'docente':'admin');CL.auth=fa.auth();try{CL.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});}catch(e){}CL.db=fa.firestore();try{CL.db.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){}CL.db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(e){setChip('☁️ Sin nube');return;}
   CL.checking=true;openCloud();CL.auth.onAuthStateChanged(u=>{CL.checking=false;if(u)cloudStart(u);else{cloudStop();openCloud();}});
   window.addEventListener('offline',()=>CL.on&&setChip('☁️ Sin internet (se guarda aquí)'));
   window.addEventListener('online',()=>{if(CL.on){setChip('☁️ Sincronizando…');cloudPush();}});
 }
-function cloudStop(){Object.values(CL.unsub).forEach(f=>f());Object.assign(CL,{on:false,ready:false,sig:{},path:{},gs:{},unsub:{},init:{},pdoc:{},psig:{},premote:{}});try{actStop();}catch(e){}outBtn(false);setChip('☁️ Iniciar sesión');}
+function cloudStop(){Object.values(CL.unsub).forEach(f=>f());Object.assign(CL,{on:false,ready:false,sig:{},path:{},gs:{},unsub:{},init:{},pdoc:{},psig:{},premote:{}});try{actStop();}catch(e){}outBtn(false);document.body.classList.add('gated');setChip('☁️ Iniciar sesión');}
 function cloudFail(m){CL.msg=m;CL.auth.signOut();drawCloud();$('cloudModal').classList.add('show');}
 async function cloudStart(u){
   setChip('☁️ Conectando…');CL.msg='';let m;
@@ -2455,7 +2455,7 @@ async function cloudStart(u){
       ensurePay();initSnap();_sl();reloadUI();
     }
   }
-  CL.on=true;CL.ready=false;listen();try{actListen();}catch(e){}outBtn(true);setChip('☁️ Sincronizando…');drawCloud();closeM('cloudModal');clearTimeout(CL.w);CL.w=setTimeout(()=>{if(!(CL.on&&!CL.ready))return;CL.db.doc('members/'+CL.auth.currentUser.uid).get({source:'server'}).then(()=>{if(CL.on&&!CL.ready){CL.ready=true;CL.err='';cloudPush();}}).catch(()=>{CL.err='El servidor no respondió a la lectura inicial (12 s).';setChip('⚠️ Sin respuesta de la nube');});},12000);
+  CL.on=true;CL.ready=false;listen();try{actListen();}catch(e){}outBtn(true);setChip('☁️ Sincronizando…');drawCloud();closeM('cloudModal');document.body.classList.remove('gated');clearTimeout(CL.w);CL.w=setTimeout(()=>{if(!(CL.on&&!CL.ready))return;CL.db.doc('members/'+CL.auth.currentUser.uid).get({source:'server'}).then(()=>{if(CL.on&&!CL.ready){CL.ready=true;CL.err='';cloudPush();}}).catch(()=>{CL.err='El servidor no respondió a la lectura inicial (12 s).';setChip('⚠️ Sin respuesta de la nube');});},12000);
 }
 function listen(){
   const adm=CL.role==='admin',want=new Set(adm?appData.groups.map(g=>String(g.id)):[CL.gid]);
@@ -2539,7 +2539,7 @@ const _ds=deleteStudent;deleteStudent=function(id){if(isColab()&&CL.on){showLock
 /* Ventana de conexión */
 document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="cloudModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">☁️ Conexión en la nube</h3><button class="mx" onclick="closeCloud()">✖️</button></div><div id="cloudBody"></div></div></div>');
 $('cloudModal').addEventListener('click',e=>{if(e.target.id==='cloudModal')closeCloud();});
-function closeCloud(){if(cloudOK()&&!CL.on)return;closeM('cloudModal');}
+function closeCloud(){if(!CL.on)return;closeM('cloudModal');}
 function openCloud(){drawCloud();$('cloudModal').classList.add('show');}
 const credInner=()=>'<p class="px-hint">Correos y contraseñas de tus docentes, ocultos. Para verlos escribe tu contraseña de Principal Admin.</p><div class="en-grid">'+fld('cvP','Tu contraseña','password')+'</div><button class="modal-btn modal-btn-save" onclick="revealCreds()">👁️ Mostrar accesos</button>';
 const credBlock=()=>'<h4 class="en-h">🔐 Accesos de los docentes</h4><div id="credBox">'+credInner()+'</div>';
@@ -2547,12 +2547,12 @@ const accessForm=()=>(appData.groups.length?'<h4 class="en-h">👩‍🏫 Crear 
 const dg=()=>'<details style="margin-top:12px"><summary class="px-hint" style="cursor:pointer">Detalles técnicos</summary><div class="px-hint" style="user-select:text;word-break:break-all">Estado: '+(CL.on?'conectado':'sin conexión a la nube')+' · listo: '+(CL.ready?'sí':'no')+' · pendientes: '+(CL.pend||0)+' · internet: '+(navigator.onLine?'sí':'no')+'<br>Último error: '+esc(CL.err||'ninguno')+'<br>Página: '+esc(location.protocol+'//'+location.host)+'</div></details>';
 function drawCloud(){
   const u=cloudOK()&&CL.auth&&CL.auth.currentUser;let h=CL.msg?'<div class="px-row late"><span>⛔ '+esc(CL.msg)+'</span></div>':'';
-  if(!cloudOK())h='<div class="px-row late"><span>No se pudo cargar Firebase (¿sin internet?). La app sigue funcionando en este dispositivo.</span></div>';
+  if(!cloudOK())h='<div class="px-row late"><span>No se pudo cargar el servicio de acceso (¿sin internet?). Conéctate para iniciar sesión.</span></div><div class="px-hint" style="margin-top:8px"><a href="../">← Volver al inicio</a></div>';
   else if(CL.checking)h+='<div class="px-row wait"><span>Verificando sesión…</span></div>';
   else if(u&&CL.on){h+='<div class="px-row ok"><span>✅ Sesión: <b>'+esc(u.email)+'</b> · '+(CL.role==='admin'?'Principal Admin':'Docente')+'</span></div><p class="px-hint">Los cambios se envían y reciben solos. Sin internet, se guardan aquí y se envían al volver la conexión.</p>'+(CL.role==='admin'?accessForm():'')+'<button class="modal-btn modal-btn-cancel" style="margin-top:10px" onclick="cloudOut()">Cerrar sesión</button>';}
   else if(u)h+='<div class="px-row wait"><span>Conectando…</span></div>';
   else h+='<p class="px-hint">Entra con tu correo y contraseña para sincronizar. Sin sesión, la app funciona solo en este dispositivo.</p>'+fld('lgE','Correo','email')+fld('lgP','Contraseña','password')+'<div class="modal-buttons"><button class="modal-btn modal-btn-save" onclick="cloudIn()">Entrar</button></div><div class="px-hint" style="margin-top:8px"><a href="../">← Volver al inicio</a></div>'+(COLAB_BUILD?'':'<div class="px-hint" style="margin-top:8px">¿Primera vez como Principal Admin? <a href="#" onclick="cloudSignUp();return false">Crear mi cuenta con este correo y contraseña</a></div>');
-  $('cloudBody').innerHTML=h+(cloudOK()?dg():'');{const x=document.querySelector('#cloudModal .mx');if(x)x.style.display=(cloudOK()&&!CL.on)?'none':'';}
+  $('cloudBody').innerHTML=h+(cloudOK()?dg():'');{const x=document.querySelector('#cloudModal .mx');if(x)x.style.display=!CL.on?'none':'';}
 }
 function cloudIn(){CL.msg='';CL.auth.signInWithEmailAndPassword($('lgE').value.trim(),$('lgP').value).catch(e=>{CL.msg='No se pudo entrar: '+(e.code||e.message);drawCloud();});}
 function cloudSignUp(){CL.msg='';CL.auth.createUserWithEmailAndPassword($('lgE').value.trim(),$('lgP').value).catch(e=>{CL.msg='No se pudo crear la cuenta: '+(e.code||e.message);drawCloud();});}
@@ -2706,14 +2706,15 @@ let GM_ALL=false;
 function openGames(){GM_ALL=false;$('gamesModal').classList.add('show');drawGames();}
 const gState=c=>c.status==='revoked'?'⛔ Desactivado':(c.uid?'📱 Activo en 1 dispositivo · '+new Date(c.claimedAt||0).toLocaleDateString('es-CO'):'🟢 Libre');
 async function drawGames(){
-  const B=$('gmBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let kd,cs;
-  try{kd=await CL.db.doc('gamekey/master').get();cs=await CL.db.collection('codes').get();}
+  const B=$('gmBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let kd,cs,gl;
+  try{kd=await CL.db.doc('gamekey/master').get();cs=await CL.db.collection('codes').get();gl=await loadGameList();}
   catch(e){B.innerHTML='<div class="px-row late"><span>⛔ '+esc(e.code||e.message)+' — revisa que las reglas de Firestore estén actualizadas y que el acceso anónimo esté activado.</span></div>';return;}
   const L=[];cs.forEach(d=>L.push([d.id,d.data()]));L.sort((a,b)=>(b[1].created||0)-(a[1].created||0));
   B.innerHTML=(kd.exists?'<div class="px-row ok"><span>🔑 Clave de los juegos guardada</span></div>':'<div class="px-row late"><span>⚠️ Falta la clave de los juegos</span></div><p class="px-hint">Pega la clave del archivo CLAVE_JUEGOS (una sola vez).</p><div class="en-grid">'+fld('gmK','Clave','text')+'</div><button class="modal-btn modal-btn-save" onclick="saveGameKey()">Guardar clave</button>')
   +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 3)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
   +'<h4 class="en-h">🎟️ Códigos ('+L.length+')</h4>'+(L.filter(([,c])=>!c.uid).length?'<button class="modal-btn modal-btn-cancel" onclick="delFreeCodes()">🧹 Eliminar todos los códigos libres ('+L.filter(([,c])=>!c.uid).length+')</button>':'')+(L.length?L.slice(0,GM_ALL?L.length:50).map(([id,c])=>'<div class="px-row"><span><b style="user-select:all">'+esc(id)+'</b> · '+esc(c.label||'sin etiqueta')+'<br><span class="px-hint">'+gState(c)+' · liberaciones '+(c.rel||0)+'/'+(c.maxRel||2)+'</span></span><span>'+(c.uid&&c.status!=='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="relCode(\''+id+'\')">🔓 Liberar</button> ':'')+(c.status==='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'active\')">↩️ Reactivar</button>':'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'revoked\')">⛔ Desactivar</button>')+' <button class="btn-pend-del" onclick="delCode(\''+id+'\')">🗑️ Eliminar</button></span></div>').join('')+(!GM_ALL&&L.length>50?'<button class="modal-btn modal-btn-cancel" onclick="GM_ALL=true;drawGames()">Mostrar todos ('+L.length+')</button>':''):'<div class="px-hint">Aún no hay códigos.</div>')
-  +'<h4 class="en-h">🔒 Cifrar un juego nuevo</h4><p class="px-hint">Elige el archivo HTML del juego. Se descarga cifrado (.enc) para subirlo a la carpeta <b>juegos/games</b> de GitHub, junto con la línea que debes agregar a <b>catalog.json</b>.</p><input type="file" id="gmF" accept=".html,.htm,text/html"><div class="en-grid">'+fld('gmId','Nombre corto del juego (opcional)','text')+'</div><button class="modal-btn modal-btn-save" onclick="encGame()">🔒 Cifrar y descargar</button><div id="gmEnc"></div>';
+  +'<h4 class="en-h">🎮 Juegos publicados desde aquí ('+gl.length+')</h4>'+(gl.length?gl.map((g,i)=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span></span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button></span></div>').join(''):'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>')
+  +'<h4 class="en-h" id="gmFormT">➕ Agregar un juego nuevo</h4><p class="px-hint">1) Elige el archivo HTML del juego. 2) Escribe el título y una descripción corta. 3) Pulsa «Publicar». Aparece solo en la biblioteca de todas las familias (necesitan internet una vez para descargarlo).</p><input type="file" id="gmF" accept=".html,.htm,text/html"><input type="hidden" id="gmEid"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div><button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="drawGames()">Limpiar</button><div id="gmPub"></div>';
 }
 async function saveGameKey(){const k=$('gmK').value.trim();try{if(b64bytes(k).length!==32)throw 0;}catch(e){showLockToast('⚠️ La clave no es válida');return;}
   try{await CL.db.doc('gamekey/master').set({k});showLockToast('✅ Clave guardada');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
@@ -2735,17 +2736,67 @@ async function delFreeCodes(){
   askTyped('Vas a eliminar '+F.length+' código(s) que nadie ha activado. Los códigos que ya están en uso no se tocan. Escribe ELIMINAR para confirmar:','ELIMINAR',async()=>{
     try{for(let i=0;i<F.length;i+=400){const Bt=CL.db.batch();F.slice(i,i+400).forEach(c=>Bt.delete(CL.db.doc('codes/'+c)));await Bt.commit();}showLockToast('🗑️ '+F.length+' código(s) eliminados');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}});}
 async function setCodeSt(code,st){try{await CL.db.doc('codes/'+code).update({status:st});showLockToast(st==='active'?'✅ Código reactivado':'⛔ Código desactivado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
-async function encGame(){
-  const f=$('gmF').files[0];if(!f){showLockToast('⚠️ Elige primero el archivo del juego');return;}
+const GCOL=['#9C88FF','#FF6B9D','#2BB7C9','#FF9F43','#5FD1D3','#6C5CE7'];
+async function loadGameList(){const d=await CL.db.doc('catalog/games').get();return d.exists?(d.data().list||[]):[];}
+const saveGameList=L=>CL.db.doc('catalog/games').set({list:L,updatedAt:Date.now()});
+const bytesB64=u8=>{let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);};
+async function pubGame(){
+  const f=$('gmF').files[0],eid=$('gmEid').value,t=$('gmT').value.trim(),d=$('gmD').value.trim(),e=$('gmE').value.trim()||'🎮',P=$('gmPub');
+  if(!t){showLockToast('⚠️ Escribe el título del juego');return;}if(!f&&!eid){showLockToast('⚠️ Elige el archivo HTML del juego');return;}
+  if(f&&f.size>12e6){showLockToast('⚠️ El archivo pasa de 12 MB');return;}
   try{
-    const kd=await CL.db.doc('gamekey/master').get();if(!kd.exists){showLockToast('⚠️ Falta guardar la clave de los juegos');return;}
-    const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));
-    const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,await f.arrayBuffer())),out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);
-    const id=(($('gmId').value.trim()||f.name.replace(/\.html?$/i,'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''))+'-v1';
-    dlBlob(out,id+'.enc','application/octet-stream');
-    $('gmEnc').innerHTML='<div class="px-row ok"><span>✅ Descargado <b>'+esc(id)+'.enc</b>. Súbelo a <b>juegos/games/</b> y agrega esta línea a <b>catalog.json</b> (completa título y descripción):</span></div><textarea rows="3" style="width:100%;box-sizing:border-box;border:2px solid #E0D9FF;border-radius:14px;padding:10px;font-family:monospace" readonly onclick="this.select()">'+esc(JSON.stringify({id,title:'',desc:'',emoji:'🎮',color:'#9C88FF',file:id+'.enc'}))+'</textarea>';
-  }catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+    const L=await loadGameList();let g=L.find(x=>x.id===eid);
+    if(!g){let id=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||('juego-'+Date.now());while(L.some(x=>x.id===id))id+='-2';
+      g={id,order:L.length+1,on:true,color:GCOL[L.length%GCOL.length],v:0,n:0,size:0};L.push(g);}
+    g.title=t;g.desc=d;g.emoji=e;
+    if(f){
+      const kd=await CL.db.doc('gamekey/master').get();if(!kd.exists){showLockToast('⚠️ Falta guardar la clave de los juegos');return;}
+      const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));
+      const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,await f.arrayBuffer())),out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);
+      const CH=600000,n=Math.ceil(out.length/CH),v=Date.now();
+      for(let i=0;i<n;i++){P.innerHTML='<div class="px-hint">Subiendo parte '+(i+1)+' de '+n+'…</div>';await CL.db.doc('gamedata/'+g.id+'_'+v+'_'+i).set({b:bytesB64(out.subarray(i*CH,(i+1)*CH))});}
+      g.v=v;g.n=n;g.size=f.size;
+    }
+    await saveGameList(L);showLockToast('✅ Juego publicado: '+t);drawGames();
+  }catch(er){showLockToast('⚠️ '+(er.code||er.message));P.innerHTML='';}
+}
+async function editGameF(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;$('gmEid').value=id;$('gmT').value=g.title||'';$('gmD').value=g.desc||'';$('gmE').value=g.emoji||'';$('gmFormT').textContent='✏️ Editando: '+g.title+' (elige un archivo solo si quieres reemplazar el juego)';$('gmFormT').scrollIntoView({behavior:'smooth'});}
+async function toggleGame(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;g.on=g.on===false;await saveGameList(L);drawGames();}
+async function moveGame(id,d){const L=(await loadGameList()).sort((a,b)=>(a.order||0)-(b.order||0)),i=L.findIndex(x=>x.id===id),j=i+d;if(i<0||j<0||j>=L.length)return;L.forEach((x,k)=>x.order=k+1);const t=L[i].order;L[i].order=L[j].order;L[j].order=t;await saveGameList(L);drawGames();}
 if(!COLAB_BUILD)(function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='🎮 Juegos';b.onclick=openGames;t.parentNode.insertBefore(b,t);})();
+</script>
+<script>
+/* ===== Campaña de donaciones (solo Principal Admin) ===== */
+document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="campModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">💜 Campaña de donaciones</h3><button class="mx" onclick="closeM(\'campModal\')">✖️</button></div><div id="cpBody"></div></div></div>');
+$('campModal').addEventListener('click',e=>{if(e.target.id==='campModal')closeM('campModal');});
+const cop=n=>'$ '+Number(n||0).toLocaleString('es-CO');
+const pctOf=(r,g)=>g>0?Math.min(100,Math.round(r/g*1000)/10):0;
+const fmtPctA=p=>String(p).replace('.',',')+'%';
+function openCamp(){$('campModal').classList.add('show');drawCamp();}
+async function drawCamp(){
+  const B=$('cpBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let d,pub,lg;
+  try{d=await CL.db.doc('admin_campaign/current').get();pub=await CL.db.doc('campaign/public').get();lg=await CL.db.collection('admin_campaign_log').get();}
+  catch(e){B.innerHTML='<div class="px-row late"><span>⛔ '+esc(e.code||e.message)+' — revisa que las reglas de Firestore estén actualizadas.</span></div>';return;}
+  const c=d.exists?d.data():{title:'',goal:'',raised:'',on:true},p=pub.exists?pub.data():null,L=[];lg.forEach(x=>L.push(x.data()));L.sort((a,b)=>b.t-a.t);
+  const dias=p&&p.updatedAt?Math.floor((Date.now()-p.updatedAt)/864e5):null;
+  B.innerHTML='<p class="px-hint">Lo que escribas aquí es <b>privado</b>. Los visitantes solo ven una <b>barra de porcentaje</b> y la fecha y hora de la última actualización; nunca los valores en dinero.</p>'
+   +'<div class="en-grid">'+fld('cpT','Nombre de la campaña','text')+fld('cpG','Objetivo a recaudar (COP)','number')+fld('cpR','Valor actual en cuenta para esta campaña (COP)','number')+'</div>'
+   +'<label class="px-hint" style="display:block;margin:8px 0"><input type="checkbox" id="cpOn" '+(c.on!==false?'checked':'')+'> Mostrar la campaña a los visitantes</label>'
+   +(p?'<div class="px-row '+(dias>=1?'late':'ok')+'"><span>Barra publicada: <b>'+fmtPctA(p.pct)+'</b> · última actualización '+new Date(p.updatedAt).toLocaleString('es-CO',{dateStyle:'long',timeStyle:'short'})+(dias>=1?'<br>⚠️ Hace '+dias+' día(s) que no actualizas. Los visitantes leen que la barra se actualiza todos los días.':'')+'</span></div>':'<div class="px-hint">Aún no has publicado el avance.</div>')
+   +'<button class="modal-btn modal-btn-save" onclick="saveCamp()">📊 Actualizar avance</button>'
+   +(L.length?'<h4 class="en-h">🕘 Historial (solo tú lo ves)</h4>'+L.slice(0,8).map(x=>'<div class="px-row"><span>'+new Date(x.t).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'})+' · '+cop(x.raised)+' de '+cop(x.goal)+' · <b>'+fmtPctA(x.pct)+'</b></span></div>').join(''):'');
+  $('cpT').value=c.title||'';$('cpG').value=c.goal||'';$('cpR').value=c.raised===''?'':(c.raised||'');
+}
+async function saveCamp(){
+  const t=$('cpT').value.trim(),g=Number($('cpG').value),r=Number($('cpR').value),on=$('cpOn').checked;
+  if(!t||!(g>0)||!(r>=0)||$('cpR').value===''){showLockToast('⚠️ Completa el nombre, el objetivo y el valor actual');return;}
+  const pct=pctOf(r,g),now=Date.now(),Bt=CL.db.batch();
+  Bt.set(CL.db.doc('admin_campaign/current'),{title:t,goal:g,raised:r,on,updatedAt:now});
+  Bt.set(CL.db.doc('campaign/public'),{title:t,pct,on,updatedAt:now});
+  Bt.set(CL.db.doc('admin_campaign_log/'+now),{t:now,title:t,goal:g,raised:r,pct,by:(CL.auth.currentUser||{}).email||''});
+  try{await Bt.commit();showLockToast('✅ Avance publicado: '+fmtPctA(pct));drawCamp();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}
+}
+if(!COLAB_BUILD)(function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='💜 Campaña';b.onclick=openCamp;t.parentNode.insertBefore(b,t);})();
 </script>
 <div id="lockToast">🔒 Activa "Editar" para modificar la asistencia</div>
 </body>
