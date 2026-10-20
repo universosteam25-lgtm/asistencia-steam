@@ -2695,6 +2695,12 @@ function archAct(id,arch){const a=actAll()[id];if(!a)return;
 (function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='💡 Actividades';b.onclick=openAct;t.parentNode.insertBefore(b,t);})();
 try{ensurePay();}catch(e){}
 </script>
+<script>
+/* Enlace de juegos (solo lectura para el docente) */
+const GAMES_URL='https://universosteam25-lgtm.github.io/juegos-universo-steam/';
+(function(){const a=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='🎮 Juegos';b.title='Abrir y copiar el enlace de los juegos';
+ b.onclick=async()=>{try{await navigator.clipboard.writeText(GAMES_URL);showLockToast('📋 Enlace de los juegos copiado');}catch(e){}window.open(GAMES_URL,'_blank','noopener');};a.parentNode.insertBefore(b,a);})();
+</script>
 <div id="lockToast">🔒 Activa "Editar" para modificar la asistencia</div>
 </body>
 </html>
