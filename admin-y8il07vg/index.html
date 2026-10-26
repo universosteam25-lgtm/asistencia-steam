@@ -2759,8 +2759,9 @@ async function drawGames(){
   B.innerHTML=gamesLinkBlock()+reqBlock(rq)+(kd.exists?'<div class="px-row ok"><span>🔑 Clave de los juegos guardada</span></div>':'<div class="px-row late"><span>⚠️ Falta la clave de los juegos</span></div><p class="px-hint">Pega la clave del archivo CLAVE_JUEGOS (una sola vez).</p><div class="en-grid">'+fld('gmK','Clave','text')+'</div><button class="modal-btn modal-btn-save" onclick="saveGameKey()">Guardar clave</button>')
   +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 3)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
   +'<h4 class="en-h">🎟️ Códigos ('+L.length+')</h4>'+(L.filter(([,c])=>!c.uid).length?'<button class="modal-btn modal-btn-cancel" onclick="delFreeCodes()">🧹 Eliminar todos los códigos libres ('+L.filter(([,c])=>!c.uid).length+')</button>':'')+(L.length?L.slice(0,GM_ALL?L.length:50).map(([id,c])=>'<div class="px-row"><span><b style="user-select:all">'+esc(id)+'</b> · '+esc(c.label||'sin etiqueta')+'<br><span class="px-hint">'+gState(c)+' · liberaciones '+(c.rel||0)+'/'+(c.maxRel||2)+'</span></span><span><button class="modal-btn modal-btn-save" onclick="copyInvite(\''+id+'\')">📨 Copiar mensaje</button> '+(navigator.share?'<button class="modal-btn modal-btn-cancel" onclick="shareInvite(\''+id+'\')">📤</button> ':'')+(c.uid&&c.status!=='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="relCode(\''+id+'\')">🔓 Liberar</button> ':'')+(c.status==='revoked'?'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'active\')">↩️ Reactivar</button>':'<button class="modal-btn modal-btn-cancel" onclick="setCodeSt(\''+id+'\',\'revoked\')">⛔ Desactivar</button>')+' <button class="btn-pend-del" onclick="delCode(\''+id+'\')">🗑️ Eliminar</button></span></div>').join('')+(!GM_ALL&&L.length>50?'<button class="modal-btn modal-btn-cancel" onclick="GM_ALL=true;drawGames()">Mostrar todos ('+L.length+')</button>':''):'<div class="px-hint">Aún no hay códigos.</div>')
-  +'<h4 class="en-h">🎮 Juegos publicados desde aquí ('+gl.length+')</h4>'+(gl.length?gl.map((g,i)=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span></span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button></span></div>').join(''):'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>')
-  +'<h4 class="en-h" id="gmFormT">➕ Agregar un juego nuevo</h4><p class="px-hint">1) Elige el archivo HTML del juego. 2) Escribe el título y una descripción corta. 3) Pulsa «Publicar». Aparece solo en la biblioteca de todas las familias (necesitan internet una vez para descargarlo).</p><input type="file" id="gmF" accept=".html,.htm,text/html"><input type="hidden" id="gmEid"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div><button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="drawGames()">Limpiar</button><div id="gmPub"></div>';
+  +'<h4 class="en-h">🎮 Juegos publicados desde aquí ('+gl.length+')</h4>'+(gl.length?gl.map((g,i)=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+(g.dim?g.dim+' · '+esc(g.subj||''):'⚠️ sin clasificar')+' · '+Math.round((g.size||0)/1024)+' KB</span></span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="testGame(\''+g.id+'\')">🧪 Probar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button></span></div>').join(''):'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>')
+  +importBlock()+fichasBlock()+'<h4 class="en-h" id="gmFormT">➕ Agregar un juego nuevo</h4><p class="px-hint">1) Elige el archivo HTML del juego. 2) Escribe el título y una descripción corta. 3) Pulsa «Publicar». Aparece solo en la biblioteca de todas las familias (necesitan internet una vez para descargarlo).</p><input type="file" id="gmF" accept=".html,.htm,text/html"><label class="en-f"><span>Archivos que usa el juego (opcional): imágenes, sonidos, .js, .css. Se incrustan solos.</span><input type="file" id="gmX" multiple></label><input type="hidden" id="gmEid"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div>'+stSel()+'<button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="drawGames()">Limpiar</button><div id="gmPub"></div>';
+  coverPrev();
 }
 async function saveGameKey(){const k=$('gmK').value.trim();try{if(b64bytes(k).length!==32)throw 0;}catch(e){showLockToast('⚠️ La clave no es válida');return;}
   try{await CL.db.doc('gamekey/master').set({k});showLockToast('✅ Clave guardada');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
@@ -2782,31 +2783,93 @@ async function delFreeCodes(){
   askTyped('Vas a eliminar '+F.length+' código(s) que nadie ha activado. Los códigos que ya están en uso no se tocan. Escribe ELIMINAR para confirmar:','ELIMINAR',async()=>{
     try{for(let i=0;i<F.length;i+=400){const Bt=CL.db.batch();F.slice(i,i+400).forEach(c=>Bt.delete(CL.db.doc('codes/'+c)));await Bt.commit();}showLockToast('🗑️ '+F.length+' código(s) eliminados');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}});}
 async function setCodeSt(code,st){try{await CL.db.doc('codes/'+code).update({status:st});showLockToast(st==='active'?'✅ Código reactivado':'⛔ Código desactivado');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+const ST={S:{n:'Ciencia',m:['Biología','Física','Química','Historia','Geografía','Ciencias Sociales','Economía y Política']},T:{n:'Tecnología',m:['Informática','Sistemas y Tecnología']},E:{n:'Ingeniería',m:['Dibujo Técnico']},A:{n:'Arte',m:['Lengua Castellana','Lectura Crítica','Inglés','Filosofía','Democracia y Constitución','Artes','Ética y Valores','Educación Religiosa','Cátedra de la Paz','Educación Física','Recreación y Deportes']},M:{n:'Matemáticas',m:['Aritmética','Álgebra','Trigonometría','Cálculo','Geometría','Estadística']}};
+const stSel=()=>'<div class="en-grid"><label class="en-f"><span>Dimensión STEAM *</span><select id="gmDim" onchange="stSubs()"><option value="">Elige…</option>'+Object.keys(ST).map(k=>'<option value="'+k+'">'+k+' – '+ST[k].n+'</option>').join('')+'</select></label><label class="en-f"><span>Asignatura *</span><select id="gmSub"><option value="">Elige primero la dimensión</option></select></label></div>';
+function stSubs(v){const d=$('gmDim').value,s=$('gmSub');s.innerHTML='<option value="">Elige…</option>'+(d?ST[d].m.map(x=>'<option>'+esc(x)+'</option>').join(''):'');if(v)s.value=v;}
+function htmlIssues(t){const o=[],rel=new Set(),ext=new Set();
+  for(const m of t.matchAll(/<(?:script|img|link|audio|video|source|iframe|embed|object)\b[^>]*?\b(?:src|href|data)\s*=\s*["']([^"']+)["']/gi)){const u=m[1];if(/^(data:|blob:|#|about:|javascript:)/i.test(u))continue;if(/^(https?:)?\/\//i.test(u))ext.add(u.replace(/^(https?:)?\/\//,'').split('/')[0]);else rel.add(u);}
+  for(const m of t.matchAll(/url\(\s*["']?(?!data:|https?:|\/\/|#|blob:)([^)"']+)/gi))rel.add(m[1]);
+  for(const m of t.matchAll(/fetch\(\s*["'`](?!https?:|data:|blob:)([^"'`]+)/gi))rel.add('fetch → '+m[1]);
+  if(rel.size)o.push('Usa archivos que no encontré ('+[...rel].slice(0,4).join(', ')+'). Selecciónalos en «Archivos que usa el juego» y publica de nuevo, o el juego saldrá incompleto.');
+  if(ext.size)o.push('Carga recursos de internet ('+[...ext].slice(0,4).join(', ')+'): fallará sin conexión o en redes que los bloqueen.');
+  return o;}
+const resizeCover=file=>new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{const r=Math.min(1,640/im.width),c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d').drawImage(im,0,0,c.width,c.height);let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>150000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q);}URL.revokeObjectURL(u);ok(d);};im.onerror=()=>no(new Error('No se pudo leer la imagen'));im.src=u;});
+const fichasBlock=()=>'<h4 class="en-h">🖼️ Fichas STEAM (carátulas)</h4><p class="px-hint">Cambia la imagen de cada ficha; se actualiza para todas las familias.</p>'+Object.keys(ST).map(k=>'<div class="px-row"><span><img id="cv_'+k+'" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:12px;vertical-align:middle;background:#E0D9FF;margin-right:8px"><b>'+k+' – '+ST[k].n+'</b><br><span class="px-hint">'+esc(ST[k].m.join(', '))+'</span></span><span><label class="modal-btn modal-btn-save" style="cursor:pointer;display:inline-block">📷 Cambiar<input type="file" accept="image/*" style="display:none" data-k="'+k+'" onchange="setCover(this.dataset.k,this)"></label> <button class="modal-btn modal-btn-cancel" data-k="'+k+'" onclick="delCover(this.dataset.k)">Quitar</button></span></div>').join('');
+async function coverPrev(){try{const d=await CL.db.doc('catalog/steam').get(),v=d.exists?(d.data().ver||{}):{};for(const k of Object.keys(ST)){if(!v[k])continue;const x=await CL.db.doc('catalog/steam_'+k).get(),im=$('cv_'+k);if(x.exists&&im)im.src=x.data().b;}}catch(e){}}
+async function setCover(k,inp){const f=inp.files[0];inp.value='';if(!f)return;try{const b=await resizeCover(f);await CL.db.doc('catalog/steam_'+k).set({b});await CL.db.doc('catalog/steam').set({ver:{[k]:Date.now()},updatedAt:Date.now()},{merge:true});const im=$('cv_'+k);if(im)im.src=b;showLockToast('✅ Carátula de '+k+' actualizada');}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+async function delCover(k){try{await CL.db.doc('catalog/steam').set({ver:{[k]:firebase.firestore.FieldValue.delete()}},{merge:true});await CL.db.doc('catalog/steam_'+k).delete();const im=$('cv_'+k);if(im)im.removeAttribute('src');showLockToast('🗑️ Carátula quitada');}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+const fileDU=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f);});
+async function bundleHtml(html,extra){
+  const by={},bn=u=>u.split(/[?#]/)[0].split('/').pop().toLowerCase(),rx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  extra.forEach(f=>by[f.name.toLowerCase()]=f);
+  const get=async u=>{if(/^(https?:)?\/\//i.test(u)){try{const r=await fetch(u.startsWith('//')?'https:'+u:u);return r.ok?await r.text():null;}catch(e){return null;}}const f=by[bn(u)];return f?await f.text():null;};
+  for(const m of [...html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>\s*<\/script>/gi)]){const c=await get(m[1]);if(c!==null)html=html.replace(m[0],()=>'<script'+(/type\s*=\s*["']module/i.test(m[0])?' type="module"':'')+'>'+c.replace(/<\/script/gi,'<\\/script')+'<\/script>');}
+  for(const m of [...html.matchAll(/<link\b[^>]*>/gi)]){if(!/stylesheet/i.test(m[0]))continue;const h=m[0].match(/href\s*=\s*["']([^"']+)["']/i);if(!h)continue;const c=await get(h[1]);if(c!==null)html=html.replace(m[0],()=>'<style>'+c+'</style>');}
+  for(const f of extra){const re=new RegExp('(["\'(])(?:[^"\'()\\s]*\\/)?'+rx(f.name)+'(?:[?#][^"\')\\s]*)?(?=["\')])','gi');if(!re.test(html))continue;const du=await fileDU(f);html=html.replace(re,(m,q)=>q+du);}
+  return html;}
+async function testGame(id){try{const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g||!g.n){showLockToast('⚠️ Este juego no tiene archivo publicado');return;}
+  showLockToast('Abriendo prueba…');const kd=await CL.db.doc('gamekey/master').get(),key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['decrypt']),ps=[];
+  for(let i=0;i<g.n;i++){const x=await CL.db.doc('gamedata/'+g.id+'_'+g.v+'_'+i).get();ps.push(b64bytes(x.data().b));}
+  const al=new Uint8Array(ps.reduce((a,p)=>a+p.length,0));let o=0;ps.forEach(p=>{al.set(p,o);o+=p.length;});
+  let html=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:al.slice(0,12)},key,al.slice(12)));
+  const spy='<script>addEventListener("error",function(e){var t=e.target;parent.postMessage({gmErr:t&&t.src?"no cargó "+String(t.src).split("/").pop().slice(0,50):(e.message||"error")},"*")},true)<\/script>';
+  html=/<head[^>]*>/i.test(html)?html.replace(/<head[^>]*>/i,m=>m+spy):html;
+  const u=URL.createObjectURL(new Blob([html],{type:'text/html'})),d=document.createElement('div'),errs=[];
+  d.style.cssText='position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column';
+  d.innerHTML='<div style="background:#6B4FE0;color:#fff;padding:10px;display:flex;gap:10px;align-items:center;font-weight:700;font-family:sans-serif"><button style="border:0;border-radius:12px;padding:8px 14px;font-weight:700">✖ Cerrar prueba</button><span class="gt">'+esc(g.title)+' · prueba</span></div><iframe style="flex:1;border:0;background:#fff" sandbox="allow-scripts allow-modals allow-forms allow-popups" allow="fullscreen; autoplay"></iframe>';
+  const h=ev=>{if(ev.data&&ev.data.gmErr&&errs.length<5){errs.push(ev.data.gmErr);d.querySelector('.gt').textContent='⚠️ '+errs.length+' aviso(s): '+errs.join(' | ');}};
+  addEventListener('message',h);d.querySelector('iframe').src=u;
+  d.querySelector('button').onclick=()=>{removeEventListener('message',h);d.remove();URL.revokeObjectURL(u);};document.body.appendChild(d);
+ }catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
+const importBlock=()=>'<h4 class="en-h">📦 Importar juegos antiguos de GitHub</h4><p class="px-hint">Copia a la nube (una sola vez) los juegos que hoy están en la página, con su clasificación. Después ya puedes borrarlos de GitHub.</p><button class="modal-btn modal-btn-save" onclick="importOld()">📦 Importar ahora</button>';
+async function importOld(){const P=$('gmPub');
+ try{P.innerHTML='<div class="px-hint">Leyendo el catálogo antiguo…</div>';
+  const kd=await CL.db.doc('gamekey/master').get();if(!kd.exists){P.innerHTML='';showLockToast('⚠️ Falta guardar la clave de los juegos');return;}
+  const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['decrypt']);
+  const r=await fetch(GAMES_URL+'games/catalog.json?t='+Date.now(),{cache:'no-store'}),cat=r.ok?await r.json():[];
+  if(!cat.length){P.innerHTML='<div class="px-hint">No hay juegos antiguos en GitHub: nada que importar.</div>';return;}
+  const L=await loadGameList();let n=0;
+  for(const c of cat){if(L.some(x=>x.id===c.id))continue;
+   P.innerHTML='<div class="px-hint">Importando «'+esc(c.title)+'»…</div>';
+   const rr=await fetch(GAMES_URL+'games/'+c.file);if(!rr.ok)throw new Error('No se pudo descargar «'+c.title+'» (HTTP '+rr.status+')');
+   const buf=new Uint8Array(await rr.arrayBuffer());let pt;
+   try{pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12));}catch(e){throw new Error('La clave guardada no abre «'+c.title+'». Revisa la clave de los juegos.');}
+   const CH=400000,N=Math.ceil(buf.length/CH),v=Date.now();
+   for(let i=0;i<N;i++){P.innerHTML='<div class="px-hint">«'+esc(c.title)+'»: parte '+(i+1)+' de '+N+'…</div>';await CL.db.doc('gamedata/'+c.id+'_'+v+'_'+i).set({b:bytesB64(buf.subarray(i*CH,(i+1)*CH))});}
+   L.push({id:c.id,title:c.title,desc:c.desc||'',emoji:c.emoji||'🎮',color:c.color||'#9C88FF',dim:c.dim||'',subj:c.subj||'',order:L.length+1,on:true,v,n:N,size:pt.byteLength});n++;
+   await saveGameList(L);}
+  showLockToast(n?'✅ Importados '+n+' juego(s)':'ℹ️ Ya estaban importados');drawGames();
+ }catch(e){P.innerHTML='<div class="px-row late"><span>⚠️ '+esc(e.code||e.message)+'</span></div>';}}
 const GCOL=['#9C88FF','#FF6B9D','#2BB7C9','#FF9F43','#5FD1D3','#6C5CE7'];
 async function loadGameList(){const d=await CL.db.doc('catalog/games').get();return d.exists?(d.data().list||[]):[];}
 const saveGameList=L=>CL.db.doc('catalog/games').set({list:L,updatedAt:Date.now()});
 const bytesB64=u8=>{let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);};
 async function pubGame(){
   const f=$('gmF').files[0],eid=$('gmEid').value,t=$('gmT').value.trim(),d=$('gmD').value.trim(),e=$('gmE').value.trim()||'🎮',P=$('gmPub');
-  if(!t){showLockToast('⚠️ Escribe el título del juego');return;}if(!f&&!eid){showLockToast('⚠️ Elige el archivo HTML del juego');return;}
+  if(!t){showLockToast('⚠️ Escribe el título del juego');return;}const dm=$('gmDim').value,sj=$('gmSub').value;if(!dm||!sj){showLockToast('⚠️ Elige la dimensión STEAM y la asignatura');return;}if(!f&&!eid){showLockToast('⚠️ Elige el archivo HTML del juego');return;}
   if(f&&f.size>12e6){showLockToast('⚠️ El archivo pasa de 12 MB');return;}
   try{
-    const L=await loadGameList();let g=L.find(x=>x.id===eid);
+    let html='',pb=null,old=null;const L=await loadGameList();let g=L.find(x=>x.id===eid);
     if(!g){let id=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||('juego-'+Date.now());while(L.some(x=>x.id===id))id+='-2';
       g={id,order:L.length+1,on:true,color:GCOL[L.length%GCOL.length],v:0,n:0,size:0};L.push(g);}
-    g.title=t;g.desc=d;g.emoji=e;
-    if(f){
+    g.title=t;g.desc=d;g.emoji=e;g.dim=dm;g.subj=sj;
+    if(f){P.innerHTML='<div class="px-hint">Preparando el juego (incrustando archivos)…</div>';html=await bundleHtml(await f.text(),[...$('gmX').files]);const iss=htmlIssues(html),sig=f.name+html.length;if(iss.length&&window._gmOk!==sig){window._gmOk=sig;P.innerHTML='<div class="px-row late"><span>⚠️ Este juego puede fallar en otros dispositivos:<br>'+iss.map(esc).join('<br>')+'</span></div><div class="px-hint">Si ya lo revisaste, pulsa «Publicar» otra vez para continuar.</div>';return;}window._gmOk=null;pb=new TextEncoder().encode(html);if(pb.length>12e6){showLockToast('⚠️ El juego ya incrustado pasa de 12 MB');P.innerHTML='';return;}
       const kd=await CL.db.doc('gamekey/master').get();if(!kd.exists){showLockToast('⚠️ Falta guardar la clave de los juegos');return;}
-      const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));
-      const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,await f.arrayBuffer())),out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);
-      const CH=600000,n=Math.ceil(out.length/CH),v=Date.now();
+      const key=await crypto.subtle.importKey('raw',b64bytes(kd.data().k),'AES-GCM',false,['encrypt','decrypt']),iv=crypto.getRandomValues(new Uint8Array(12));
+      const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,pb)),out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);
+      const CH=400000,n=Math.ceil(out.length/CH),v=Date.now();
       for(let i=0;i<n;i++){P.innerHTML='<div class="px-hint">Subiendo parte '+(i+1)+' de '+n+'…</div>';await CL.db.doc('gamedata/'+g.id+'_'+v+'_'+i).set({b:bytesB64(out.subarray(i*CH,(i+1)*CH))});}
-      g.v=v;g.n=n;g.size=f.size;
+      P.innerHTML='<div class="px-hint">Verificando que el juego quedó bien guardado…</div>';
+      const ps=[];for(let i=0;i<n;i++){const x=await CL.db.doc('gamedata/'+g.id+'_'+v+'_'+i).get({source:'server'});ps.push(b64bytes(x.data().b));}
+      const al=new Uint8Array(ps.reduce((a,p)=>a+p.length,0));let oo=0;ps.forEach(p=>{al.set(p,oo);oo+=p.length;});
+      const vt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:al.slice(0,12)},key,al.slice(12)));
+      if(vt.length!==pb.length)throw new Error('La verificación falló: vuelve a publicar');
+      old=[g.id,g.v,g.n];g.v=v;g.n=n;g.size=pb.length;
     }
-    await saveGameList(L);showLockToast('✅ Juego publicado: '+t);drawGames();
+    await saveGameList(L);if(old&&old[1]&&old[2]){for(let i=0;i<old[2];i++)CL.db.doc('gamedata/'+old[0]+'_'+old[1]+'_'+i).delete().catch(()=>{});}showLockToast('✅ Juego publicado y verificado: '+t);drawGames();
   }catch(er){showLockToast('⚠️ '+(er.code||er.message));P.innerHTML='';}
 }
-async function editGameF(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;$('gmEid').value=id;$('gmT').value=g.title||'';$('gmD').value=g.desc||'';$('gmE').value=g.emoji||'';$('gmFormT').textContent='✏️ Editando: '+g.title+' (elige un archivo solo si quieres reemplazar el juego)';$('gmFormT').scrollIntoView({behavior:'smooth'});}
+async function editGameF(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;$('gmEid').value=id;$('gmT').value=g.title||'';$('gmD').value=g.desc||'';$('gmE').value=g.emoji||'';$('gmDim').value=g.dim||'';stSubs(g.subj||'');$('gmFormT').textContent='✏️ Editando: '+g.title+' (elige un archivo solo si quieres reemplazar el juego)';$('gmFormT').scrollIntoView({behavior:'smooth'});}
 async function toggleGame(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;g.on=g.on===false;await saveGameList(L);drawGames();}
 async function moveGame(id,d){const L=(await loadGameList()).sort((a,b)=>(a.order||0)-(b.order||0)),i=L.findIndex(x=>x.id===id),j=i+d;if(i<0||j<0||j>=L.length)return;L.forEach((x,k)=>x.order=k+1);const t=L[i].order;L[i].order=L[j].order;L[j].order=t;await saveGameList(L);drawGames();}
 if(!COLAB_BUILD)(function(){const t=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.id='gamesBtn';b.textContent='🎮 Juegos';b.onclick=openGames;t.parentNode.insertBefore(b,t);})();
