@@ -1107,7 +1107,7 @@ body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.
             </div>
             <div>
                 <h1>Universo STEAM ✨</h1>
-                <p>Registro de Asistencia Escolar — 2026 / 2027</p>
+                <p>Registro de Asistencia Escolar — 2026 / 2027 / 2028</p>
             </div>
         </div>
 
@@ -1132,7 +1132,7 @@ body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.
         <div style="display:flex; gap:10px; align-items:center;">
             <span style="font-family: 'Fredoka', sans-serif; color: #6C5CE7; font-size: 14px;">📅 Año:</span>
             <button class="year-btn active" id="year2026" onclick="switchYear(2026)">2026</button>
-            <button class="year-btn" id="year2027" onclick="switchYear(2027)">2027</button>
+            <button class="year-btn" id="year2027" onclick="switchYear(2027)">2027</button><button class="year-btn" id="year2028" onclick="switchYear(2028)">2028</button>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn-view-notes" onclick="openAllNotesModal()" title="Ver todas las notas de información (por asistencia)">📝 Ver notas <span class="badge-count" id="notesCountBadge">0</span></button>
@@ -1293,7 +1293,7 @@ body:not(.colab) .only-colab,body.colab .only-madre{display:none!important}body.
             { name: 'Julio', days: 31, icon: '🏖️' },
             { name: 'Agosto', days: 31, icon: '🎨' },
             { name: 'Septiembre', days: 30, icon: '🍂' },
-            { name: 'Octubre', days: 31, icon: '🎃' },
+            { name: 'Octubre', days: 31, icon: '🍁' },
             { name: 'Noviembre', days: 30, icon: '⭐' },
             { name: 'Diciembre', days: 31, icon: '🎄' }
         ];
@@ -2112,7 +2112,7 @@ const fld=(id,l,t)=>`<label class="en-f"><span>${l}</span><input id="${id}" type
 document.body.insertAdjacentHTML('beforeend',`
 <div class="modal-overlay" id="enrollModal"><div class="modal-content big">
  <div class="mhead"><h3 class="modal-title" id="enrollTitle" style="margin:0"></h3><button class="mx" onclick="closeM('enrollModal')">✖️</button></div>
- <div class="en-grid">${fld('enName','Nombre')}${fld('en_care','Cuidado especial')}${fld('en_age','Edad','number')}${fld('en_grade','Grado')}${fld('en_tipo','Tipo de atención')}${fld('en_area','Área')}${fld('en_tema','Temática')}${fld('en_acud','Acudientes')}${fld('en_tel','Teléfono','tel')}${fld('enPrice','Precio mensual ($)','number')}<label class="en-f"><span>Profe / grupo</span><select id="enG" class="pendiente-select" onchange="fillSub()"></select></label><label class="en-f"><span>Subgrupo</span><select id="enSG" class="pendiente-select"></select></label>${fld('enReg','Fecha de inscripción / llegada','date')}${fld('enDay','Día de pago (1-31)','number')}</div>
+ <div class="en-grid">${fld('enName','Nombre')}${fld('en_care','Cuidado especial')}${fld('en_age','Edad (se calcula con el cumpleaños)','number')}${fld('enBday','Cumpleaños','date')}${fld('en_grade','Grado')}${fld('en_tipo','Tipo de atención')}${fld('en_area','Área')}${fld('en_tema','Temática')}${fld('en_acud','Acudientes')}${fld('en_tel','Teléfono','tel')}${fld('enPrice','Precio mensual ($)','number')}<label class="en-f"><span>Profe / grupo</span><select id="enG" class="pendiente-select" onchange="fillSub()"></select></label><label class="en-f"><span>Subgrupo</span><select id="enSG" class="pendiente-select"></select></label>${fld('enReg','Fecha de inscripción / llegada','date')}${fld('enDay','Día de pago (1-31)','number')}</div>
  <h4 class="en-h">📅 Días y horario</h4>
  <div class="sc-days" id="scDays"></div>
  <div class="sc-quick"><button type="button" class="tb" onclick="selDays([1,2,3,4,5])">Lun–Vie</button><button type="button" class="tb" onclick="selDays([])">Limpiar</button></div>
@@ -2145,7 +2145,7 @@ function openEnroll(id){
   const s=id?appData.students.find(x=>x.id===id):null,c=appData.config;
   $('enrollTitle').textContent=s?'🎓 Datos de '+s.name:'🎓 Inscribir estudiante';
   $('enName').value=s?s.name:$('newStudentName').value.trim();
-  EF.forEach(f=>$('en_'+f).value=s?(s[f]||''):'');
+  EF.forEach(f=>$('en_'+f).value=s?(s[f]||''):'');$('enBday').value=s?(s.bday||''):'';
   $('enPrice').value=s&&s.price!==''&&s.price!=null?s.price:(c.fee||'');
   fillGrp(s);$('enReg').value=s?(s.regDate||''):iso(new Date());$('enDay').value=s?(s.payDay||c.payDay||''):(c.payDay||'');
   enSched=JSON.parse(JSON.stringify((s&&s.sched)||{}));enSel=new Set();P={in:{},out:{}};drawSched();
@@ -2180,7 +2180,7 @@ function saveEnroll(){
   const sched=JSON.parse(JSON.stringify(enSched));
   let s=enrollId?appData.students.find(x=>x.id===enrollId):null;
   if(!s){s={id:Date.now(),name,attendance:{}};appData.students.push(s);}
-  s.name=name;EF.forEach(f=>s[f]=$('en_'+f).value.trim());
+  s.name=name;EF.forEach(f=>s[f]=$('en_'+f).value.trim());s.bday=$('enBday').value||'';{const _a=ageFrom(s.bday);if(_a!==null)s.age=String(_a);}
   s.price=$('enPrice').value===''?'':Number($('enPrice').value);s.payDay=Number($('enDay').value)||'';s.regDate=$('enReg').value;s.gid=Number($('enG').value)||'';s.sg=Number($('enSG').value)||'';s.sched=sched;
   if(!enrollId)$('newStudentName').value='';
   saveLocalData();closeM('enrollModal');renderTable();refreshStudentWin();
@@ -2612,7 +2612,7 @@ function addExtraPend(){
   if(!sid||!amt||!dt){showLockToast('⚠️ Elige estudiante, valor y fecha del servicio');return;}
   const s=appData.students.find(x=>x.id===sid);
   appData.pagosPend.push({id:Date.now(),sid,name:s?s.name:'',date:dt,amount:amt,type:'extra',note:$('pxNote').value.trim()||'Horas extra',pend:1,mt:Date.now()});
-  $('pxAmt').value='';$('pxNote').value='';saveLocalData();renderPay();showLockToast('⏳ Dejado como pendiente');
+  $('pxAmt').value='';$('pxNote').value='';saveLocalData();renderTable();renderPay();showLockToast('⏳ Dejado como pendiente');
 }
 function payPend(id){
   const p=appData.pagosPend.find(x=>x.id===id);if(!p)return;const dt=($('pdt_'+id)||{}).value||iso(new Date());
@@ -2724,6 +2724,45 @@ try{ensurePay();}catch(e){}
 const GAMES_URL='https://universosteam25-lgtm.github.io/juegos-universo-steam-j3y9ew1j/';
 (function(){const a=document.querySelector('.btn-pay'),b=document.createElement('button');b.className='btn-view-notes';b.textContent='🎮 Juegos';b.title='Abrir y copiar el enlace de los juegos';
  b.onclick=async()=>{try{await navigator.clipboard.writeText(GAMES_URL);showLockToast('📋 Enlace de los juegos copiado');}catch(e){}window.open(GAMES_URL,'_blank','noopener');};a.parentNode.insertBefore(b,a);})();
+</script>
+<script>
+/* ===== Ajustes: año 2028, cumpleaños y edad, extras pendientes en asistencia, pagos desplegables ===== */
+document.head.insertAdjacentHTML('beforeend','<style>'
++'.pend-mark{position:absolute;right:1px;top:1px;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FFE9A8,#FFB347);display:flex!important;align-items:center;justify-content:center;font-size:9px;line-height:1;box-shadow:0 1px 5px rgba(255,170,40,.7);animation:pendPulse 2.2s ease-in-out infinite;cursor:help;z-index:2}'
++'td:has(>.pend-mark){position:relative}@keyframes pendPulse{0%,100%{transform:scale(1);box-shadow:0 1px 5px rgba(255,170,40,.7)}50%{transform:scale(1.18);box-shadow:0 0 0 4px rgba(255,179,71,.25)}}'
++'@media(prefers-reduced-motion:reduce){.pend-mark{animation:none}}'
++'.px-month .px-mh{cursor:pointer;user-select:none;justify-content:flex-start}.px-month .px-mh::before{content:"▾";margin-right:4px;color:#7a63e8}.px-month.col .px-mh::before{content:"▸"}.px-month .px-mh span:last-child{margin-left:auto}.px-month.col .px-line{display:none!important}'
++'.px-grp{border:1px solid #E2E0F0;border-radius:12px;margin:6px 0;background:#fff;padding:2px 8px}.px-grp>summary{cursor:pointer;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 2px;font-size:13px;color:#5A49E0;font-family:Fredoka,sans-serif}.px-gbar{display:flex;justify-content:flex-end;margin:2px 0 4px}'
++'</style>');
+/* --- Edad automática con el cumpleaños --- */
+function ageFrom(b){const m=String(b||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return null;const t=new Date();let a=t.getFullYear()-(+m[1]);if(t.getMonth()+1<+m[2]||(t.getMonth()+1===+m[2]&&t.getDate()<+m[3]))a--;return a>=0&&a<120?a:null;}
+function refreshAges(){let ch=0;(appData.students||[]).forEach(s=>{if(!s.bday)return;const a=ageFrom(s.bday);if(a!==null&&String(s.age)!==String(a)){s.age=String(a);ch=1;}});if(ch){try{saveLocalData();}catch(e){}}}
+const _rtAge=renderTable;renderTable=function(){try{refreshAges();}catch(e){}_rtAge();};
+if($('enBday'))$('enBday').addEventListener('change',()=>{const a=ageFrom($('enBday').value);if(a!==null)$('en_age').value=a;});
+/* --- Año 2028 --- */
+function yr28(){const b=document.getElementById('year2028');if(b)b.className='year-btn '+(currentYear===2028?'active':'');}
+const _sy2=switchYear;switchYear=function(y){_sy2(y);yr28();};
+const _rmb2=renderMonthButtons;renderMonthButtons=function(){_rmb2();yr28();};
+/* --- Extra pendiente: símbolo en el día de la asistencia --- */
+const _pb2=payBell;payBell=function(s,day){let h=_pb2(s,day);try{const dt=currentYear+'-'+String(currentMonthIndex+1).padStart(2,'0')+'-'+String(day).padStart(2,'0'),L=(appData.pagosPend||[]).filter(p=>p.sid===s.id&&p.date===dt);if(L.length)h+='<span class="pend-mark" title="Extra pendiente de pago: '+esc(L.map(p=>p.note+' · '+money(p.amount)).join(' / '))+'">⏳</span>';}catch(e){}return h;};
+/* --- Pagos: meses y estudiantes desplegables --- */
+const PXO={mon:new Set(),grp:new Set()};
+function pxFold(){
+  document.querySelectorAll('#pxList .px-month').forEach(m=>{const key=(m.querySelector('.px-mh span')||{}).textContent||'',h=m.querySelector('.px-mh');if(!PXO.mon.has(key))m.classList.add('col');h.title='Toca para ver u ocultar los pagos de este mes';h.onclick=()=>{m.classList.toggle('col');if(m.classList.contains('col'))PXO.mon.delete(key);else PXO.mon.add(key);};});
+  const box=$('pxStatus');if(!box)return;const rows=[...box.querySelectorAll(':scope>.px-row')],V=visible();
+  if(!rows.length||rows.length!==V.length)return;
+  const order=[...(appData.groups||[]).map(g=>String(g.id)),''],G={};rows.forEach((r,i)=>{const k=String(V[i].gid||'');(G[k]=G[k]||[]).push(r);});
+  const keys=Object.keys(G).sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib);}),frag=document.createDocumentFragment(),bar=document.createElement('div');
+  bar.className='px-gbar';bar.innerHTML='<button class="modal-btn modal-btn-cancel" id="pxAll"></button>';frag.appendChild(bar);
+  const setAll=()=>{const ds=[...box.querySelectorAll('details.px-grp')];const b=$('pxAll');if(b)b.textContent=ds.every(x=>x.open)?'🙈 Contraer todos':'👁️ Ver todos';};
+  keys.forEach(k=>{const rs=G[k],g=(appData.groups||[]).find(x=>String(x.id)===k),ok=rs.filter(r=>r.classList.contains('ok')).length,pend=rs.filter(r=>!r.classList.contains('ok')&&!r.classList.contains('none')).length,d=document.createElement('details');
+    d.className='px-grp';if(PXO.grp.has(k)||keys.length===1)d.open=true;
+    d.innerHTML='<summary><b>👩‍🏫 '+esc(g?g.name:'Sin grupo')+'</b><span>'+rs.length+' niño'+(rs.length===1?'':'s')+' · ✅ '+ok+' · ⏳ '+pend+'</span></summary>';
+    rs.forEach(r=>d.appendChild(r));d.addEventListener('toggle',()=>{if(d.open)PXO.grp.add(k);else PXO.grp.delete(k);setAll();});frag.appendChild(d);});
+  box.innerHTML='';box.appendChild(frag);
+  $('pxAll').onclick=()=>{const ds=[...box.querySelectorAll('details.px-grp')],op=!ds.every(x=>x.open);ds.forEach(x=>{x.open=op;});setAll();};setAll();
+}
+const _rp4=renderPay;renderPay=function(){_rp4();try{pxFold();}catch(e){console.error(e);}};
 </script>
 <div id="lockToast">🔒 Activa "Editar" para modificar la asistencia</div>
 </body>

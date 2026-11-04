@@ -6,6 +6,6 @@ self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);
   if(['www.gstatic.com','fonts.googleapis.com','fonts.gstatic.com'].includes(u.hostname)){
     e.respondWith(caches.open(V).then(c=>c.match(r).then(m=>m||fetch(r).then(x=>{c.put(r,x.clone());return x;}))));return;}
-  if(u.origin===location.origin){
+  if(u.origin===location.origin&&r.url.startsWith(self.registration.scope)){
     e.respondWith(fetch(r).then(x=>{const y=x.clone();caches.open(V).then(c=>c.put(r,y));return x;}).catch(()=>caches.match(r).then(m=>m||caches.match('./index.html'))));}
 });
