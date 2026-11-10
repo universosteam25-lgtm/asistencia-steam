@@ -2054,23 +2054,28 @@ const curStu=()=>appData.students.find(x=>x.id===currentStudentModalId);
 function updCover(){
   const s=curStu();if(!s||!$('spCover'))return;
   if(!pday(s)){$('spCover').textContent='Define el día de pago para calcular el periodo.';return;}
-  const r=periodFor(s,$('spDate').value||iso(new Date()),getRef());$('spCover').textContent='Este pago cubre del '+longDate(r.from)+' al '+longDate(r.to)+'.';
+  const r=periodFor(s,$('spDate').value||iso(new Date()),getRef());const tx=($('spTo')||{}).value,to=tx&&tx>r.from?tx:r.to;$('spCover').textContent='Este pago cubre del '+longDate(r.from)+' al '+longDate(to)+'.'+(to!==r.to?' (pago parcial: termina antes de completar el mes)':'');
 }
+const paidUntilOf=s=>appData.pagos.filter(x=>x.sid===s.id&&x.type==='mes'&&x.to&&x.from>(s.reactFrom||'')).map(x=>x.to).sort().pop()||'';
 function payNow(){
-  const s=curStu();if(!s)return;const day=Number($('spDay').value),amt=Number($('spAmt').value),dt=$('spDate').value;
+  const s=curStu();if(!s)return;const day=Number($('spDay').value),amt=Number($('spAmt').value),dt=$('spDate').value,toX=($('spTo')||{}).value||'',ret=!!($('spRet')&&$('spRet').checked);
+  if(s.retired){showLockToast('⚠️ Este estudiante está retirado: primero reactívalo');return;}
   if(!(day>=1&&day<=31)){showLockToast('⚠️ Indica el día de pago (1 a 31)');return;}
   if(!amt||!dt){showLockToast('⚠️ Indica el valor y la fecha en que pagó');return;}
   s.payDay=day;const r=periodFor(s,dt,getRef());
+  if(toX){if(toX<=r.from){showLockToast('⚠️ La fecha de terminación debe ser después del '+longDate(r.from));return;}r.to=toX;}
   if(appData.pagos.some(x=>x.sid===s.id&&x.type==='mes'&&x.from===r.from)){showLockToast('⚠️ Ese mes ya tiene un pago registrado');return;}
-  appData.pagos.push({id:Date.now(),sid:s.id,name:s.name,date:dt,from:r.from,to:r.to,amount:amt,type:'mes'});
-  s.paidUntil=appData.pagos.filter(x=>x.sid===s.id&&x.type==='mes').map(x=>x.to).sort().pop();
+  const rec={id:Date.now(),sid:s.id,name:s.name,date:dt,from:r.from,to:r.to,amount:amt,type:'mes'};if(toX)rec.partial=1;
+  appData.pagos.push(rec);
+  s.paidUntil=paidUntilOf(s);
+  if(ret){doRetire(s,r.to,true);return;}
   saveLocalData();renderTable();renderStudentPay();if($('payModal').classList.contains('show'))renderPay();
 }
 function delPay(pid){
   const p0=appData.pagos.find(x=>x.id===pid);
   appConfirm('¿Eliminar el pago de '+(p0?p0.name+' por '+money(p0.amount):'este registro')+'?',()=>{
     const p=appData.pagos.find(x=>x.id===pid);appData.pagos=appData.pagos.filter(x=>x.id!==pid);
-    if(p&&p.type==='mes'){const s=appData.students.find(x=>x.id===p.sid);if(s)s.paidUntil=appData.pagos.filter(x=>x.sid===s.id&&x.type==='mes').map(x=>x.to).sort().pop()||'';}
+    if(p&&p.type==='mes'){const s=appData.students.find(x=>x.id===p.sid);if(s)s.paidUntil=paidUntilOf(s);}
     saveLocalData();renderTable();if($('payModal').classList.contains('show'))renderPay();if(currentStudentModalId!==null)renderStudentPay();
   });
 }
@@ -2092,7 +2097,7 @@ function updatePayAlerts(){
 }
 function dueMark(day){
   const dim=getDaysInMonth(currentYear,currentMonthIndex);
-  const n=(appData.students||[]).filter(s=>pday(s)&&Math.min(pday(s),dim)===day&&afterStart(s,day)).map(s=>s.name);
+  const n=(appData.students||[]).filter(s=>!s.retired&&pday(s)&&Math.min(pday(s),dim)===day&&afterStart(s,day)).map(s=>s.name);
   return n.length?'<span class="due-dot" title="Día de pago: '+esc(n.join(', '))+'">💰</span>':'';
 }
 function startOf(s){return s.regDate||(appData.pagos.filter(x=>x.sid===s.id&&x.type==='mes').map(x=>x.from).sort()[0])||'';}
@@ -2217,29 +2222,30 @@ function renderPay(){drawMeta();
   const g={};[...appData.pagos.filter(pagoOk)].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id).forEach(p=>(g[p.date.slice(0,7)]=g[p.date.slice(0,7)]||[]).push(p));
   
   const H=Object.keys(g).sort().map(k=>{const L=g[k],sum=L.reduce((a,p)=>a+p.amount,0);const[y,m]=k.split('-');
-    return `<div class="px-month"><div class="px-mh"><span>${MONTHS[m-1].name} ${y}</span><span>Recibido ${money(sum)} · Meta ${money(metaOf(k))}</span></div>${L.map(p=>`<div class="px-line"><span>${longDate(p.date)} · <b>${esc(p.name)}</b> — ${p.type==='mes'?'pago mes del '+longDate(p.from)+' al '+longDate(p.to):'⏱️ '+esc(p.note)}</span><span>${money(p.amount)} <button class="btn-pend-del" onclick="delPay(${p.id})">🗑️</button></span></div>`).join('')}</div>`;}).join('');
+    return `<div class="px-month"><div class="px-mh"><span>${MONTHS[m-1].name} ${y}</span><span>Recibido ${money(sum)} · Meta ${money(metaOf(k))}</span></div>${L.map(p=>`<div class="px-line"><span>${longDate(p.date)} · <b>${esc(p.name)}</b> — ${p.type==='mes'?'pago '+(p.partial?'parcial ':'')+'mes del '+longDate(p.from)+' al '+longDate(p.to):'⏱️ '+esc(p.note)}</span><span>${money(p.amount)} <button class="btn-pend-del" onclick="delPay(${p.id})">🗑️</button></span></div>`).join('')}</div>`;}).join('');
   $('pxList').innerHTML=H||'<div class="empty-notes">✨ Aún no hay pagos registrados.</div>';
 }
 
 /* --- Grupos, prioridad, conteo diario, meta mensual y avisos --- */
 let gF={g:'',s:''};
-const visible=()=>appData.students.filter(s=>!gF.g||((gF.g==='none'?!s.gid:String(s.gid)===String(gF.g))&&(!gF.s||String(s.sg)===String(gF.s))));
+const visAll=()=>appData.students.filter(s=>!gF.g||((gF.g==='none'?!s.gid:String(s.gid)===String(gF.g))&&(!gF.s||String(s.sg)===String(gF.s))));
+const visible=()=>visAll().filter(s=>!s.retired);
 function sortStu(){const gi=s=>{const i=(appData.groups||[]).findIndex(g=>g.id===s.gid);return i<0?1e6:i;};appData.students.sort((a,b)=>gi(a)-gi(b)||(a.order||1e9)-(b.order||1e9));}
 function grpLabel(s){const g=(appData.groups||[]).find(x=>x.id===s.gid);if(!g)return'';const x=g.subs.find(y=>y.id===s.sg);return g.name+(x?' › '+x.name:'');}
 const _odv=openDayView;
 openDayView=function(d){_odv(d);const n=$('dayList').querySelectorAll('.day-card').length;$('dayList').insertAdjacentHTML('afterbegin','<div class="day-count"><b>'+n+'</b><br>'+(n===1?'niño asiste':'niños asisten')+' este día</div>');};
 const _rt=renderTable;
-renderTable=function(){const all=appData.students;if(gF.g||gF.s)appData.students=visible();try{_rt();}finally{appData.students=all;}drawGrp();updatePayAlerts();};
+renderTable=function(){const all=appData.students;appData.students=visible();try{_rt();}finally{appData.students=all;}drawGrp();updatePayAlerts();};
 
 let grpOpen=false;
 const gName=()=>gF.g==='none'?'Sin grupo':((appData.groups.find(x=>String(x.id)===String(gF.g))||{}).name||'');
 function toggleGrp(){grpOpen=!grpOpen;drawGrp();}
 function drawGrp(){
-  const G=appData.groups,st=appData.students,c=f=>st.filter(f).length,on=(a,b)=>String(a)===String(b)?'on':'';
+  const G=appData.groups,st=appData.students.filter(x=>!x.retired),c=f=>st.filter(f).length,on=(a,b)=>String(a)===String(b)?'on':'';
   const g=G.find(x=>String(x.id)===String(gF.g)),sb=g&&gF.s?g.subs.find(x=>String(x.id)===String(gF.s)):null;
   const cur=!gF.g?'Todos':(gF.g==='none'?'Sin grupo':(g?g.name:'Todos'))+(sb?' › '+sb.name:'');
   let h=payOff()?`<span class="gchip gtoggle on" style="cursor:default">👩‍🏫 Grupo: ${esc(cur)} (${visible().length})</span>`:`<button class="gchip gtoggle on" onclick="toggleGrp()">👩‍🏫 Grupo: ${esc(cur)} (${visible().length}) ${grpOpen?'▴':'▾'}</button>`;
-  h+='<button class="gchip act" onclick="openGrp()">⚙️ '+(payOff()?'Subgrupos':'Crear / editar grupos')+'</button><button class="gchip act" onclick="openPrio()">🔢 Prioridad</button>';
+  h+='<button class="gchip act" onclick="openGrp()">⚙️ '+(payOff()?'Subgrupos':'Crear / editar grupos')+'</button><button class="gchip act" onclick="openPrio()">🔢 Prioridad</button>'+inaChip();
   if(grpOpen){
     let l=`<button class="gchip ${gF.g?'':'on'}" onclick="setG('','')">Todos (${st.length})</button>`+G.map(g=>`<button class="gchip ${on(gF.g,g.id)}" onclick="setG('${g.id}','')">👩‍🏫 ${esc(g.name)} (${c(s=>s.gid===g.id)})</button>`).join('');
     if(G.length&&c(s=>!s.gid))l+=`<button class="gchip ${gF.g==='none'?'on':''}" onclick="setG('none','')">Sin grupo (${c(s=>!s.gid)})</button>`;
@@ -2278,8 +2284,8 @@ function drawPL(){const V=visible();$('prioList').innerHTML='<div class="px-hint
 function setOrder(id,v){appData.students.find(x=>x.id===id).order=Number(v)||'';sortStu();saveLocalData();drawPL();renderTable();}
 
 /* Meta e ingreso del mes */
-const metaOf=k=>visible().reduce((a,s)=>{const st=startOf(s);return a+((!st||st.slice(0,7)<=k)?(Number(s.price)||Number(appData.config.fee)||0):0);},0);
-const pagoOk=p=>{if(!gF.g)return true;const t=appData.students.find(x=>x.id===p.sid);return !!t&&visible().includes(t);};
+const metaOf=k=>visAll().filter(s=>!s.retired||(s.retDate&&s.retDate.slice(0,7)>=k)).reduce((a,s)=>{const st=startOf(s);return a+((!st||st.slice(0,7)<=k)?(Number(s.price)||Number(appData.config.fee)||0):0);},0);
+const pagoOk=p=>{if(!gF.g)return true;const t=appData.students.find(x=>x.id===p.sid);return !!t&&visAll().includes(t);};
 const incomeOf=k=>appData.pagos.filter(p=>pagoOk(p)&&p.date.slice(0,7)===k).reduce((a,p)=>a+p.amount,0);
 function drawMeta(){const k=currentYear+'-'+String(currentMonthIndex+1).padStart(2,'0');$('pxMeta').innerHTML=`<div>Meta de ${MONTHS[currentMonthIndex].name} ${currentYear}${gF.g?' · '+esc(gName()):''}<b>${money(metaOf(k))}</b>según los niños inscritos</div><div>Ingresado este mes<b>${money(incomeOf(k))}</b>pagos recibidos</div>`;}
 
@@ -2303,15 +2309,65 @@ function renderStudentData(){
 }
 function renderStudentPay(){
   const s=curStu();if(!s)return;const p=payState(s),a=Number(s.price)||Number(appData.config.fee)||0;
-  const H=appData.pagos.filter(x=>x.sid===s.id).sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="px-line"><span>${longDate(x.date)} — ${x.type==='mes'?'mes del '+longDate(x.from)+' al '+longDate(x.to):'⏱️ '+esc(x.note)}</span><span>${money(x.amount)} <button class="btn-pend-del" onclick="delPay(${x.id})">🗑️</button></span></div>`).join('');
+  const H=appData.pagos.filter(x=>x.sid===s.id).sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="px-line"><span>${longDate(x.date)} — ${x.type==='mes'?(x.partial?'pago parcial ':'')+'mes del '+longDate(x.from)+' al '+longDate(x.to):'⏱️ '+esc(x.note)}</span><span>${money(x.amount)} <button class="btn-pend-del" onclick="delPay(${x.id})">🗑️</button></span></div>`).join('');
   $('tabPay').innerHTML=`<div class="px-row ${p.k}"><span>${p.k==='ok'?'✅ Pagado':p.k==='none'?'⚪':'⏳ Pendiente'} — ${p.t}${p.due?' · próximo pago '+longDate(p.due):''}</span></div>
   <div class="en-grid" style="margin-top:8px">${fld('spDay','Día de pago (1-31)','number')}${fld('spAmt','Valor ($)','number')}${fld('spDate','Fecha en que pagó','date')}<label class="en-f"><span>Mes de referencia (inicia el día de pago)</span><div style="display:flex;gap:4px"><select id="spRefM" class="pendiente-select" style="flex:1">${MONTHS.map((m,i)=>`<option value="${i}">${m.name}</option>`).join('')}</select><select id="spRefY" class="pendiente-select">${[0,1,2,3].map(i=>`<option>${new Date().getFullYear()-1+i}</option>`).join('')}</select></div></label></div>
+  <div class="en-grid" style="margin-top:6px"><label class="en-f"><span>Termina el… (solo si es distinta a la usual: sale antes de completar el mes)</span><input id="spTo" type="date"></label></div>
+  <label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-weight:700;font-size:13px"><input type="checkbox" id="spRet"> 🚪 Con este pago el estudiante se retira (pasa a Inactivos)</label>
   <div class="px-hint" id="spCover"></div>
   <div class="modal-buttons" style="margin-top:8px"><button class="modal-btn modal-btn-save" onclick="payNow()">✅ Pagado</button></div>
+  ${s.retired?`<div class="px-row late" style="margin-top:8px"><span>🚪 Retirado desde ${s.retDate?longDate(s.retDate):'—'}</span><button onclick="openReact(${s.id})">↩️ Reactivar</button></div>`:`<h4 class="en-h">🚪 Retiro</h4><div class="en-grid">${fld('spRetD','Fecha de retiro','date')}</div><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="retireBtn()">🚪 Retirar sin registrar pago</button></div>`}
   <h4 class="en-h">Registro de pagos</h4>${H||'<div class="empty-notes">Sin pagos registrados.</div>'}`;
   $('spDay').value=pday(s)||'';$('spAmt').value=a||'';$('spDate').value=iso(new Date());
+  if($('spRetD'))$('spRetD').value=iso(new Date());if($('spTo'))$('spTo').onchange=updCover;
   $('spDay').onchange=()=>{s.payDay=Number($('spDay').value)||'';saveLocalData();renderTable();renderStudentPay();};
   refTouched=false;setRefDefault();$('spRefM').onchange=$('spRefY').onchange=()=>{refTouched=true;updCover();};$('spDate').onchange=()=>{if(!refTouched)setRefDefault();updCover();};updCover();
+}
+
+
+/* ===== Retiros, reactivación y pagos parciales ===== */
+const inaList=()=>appData.students.filter(s=>s.retired);
+function inaChip(){if(payOff())return'';const n=inaList().length;return'<button class="gchip act" onclick="openIna()">🚪 Inactivos ('+n+')</button>';}
+document.body.insertAdjacentHTML('beforeend',`
+<div class="modal-overlay" id="inaModal"><div class="modal-content big"><div class="mhead"><h3 class="modal-title" style="margin:0">🚪 Estudiantes inactivos</h3><button class="mx" onclick="closeM('inaModal')">✖️</button></div>
+<p class="px-hint">Los estudiantes retirados no cuentan en el calendario, la asistencia ni los avisos de pago. Sus pagos y datos se conservan. Si vuelven, reactívalos con sus nuevas fechas o valores.</p><div id="inaList"></div>
+<div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeM('inaModal')">Cerrar</button></div></div></div>
+<div class="modal-overlay" id="reactModal"><div class="modal-content"><div class="mhead"><h3 class="modal-title" style="margin:0">↩️ Reactivar estudiante</h3><button class="mx" onclick="closeM('reactModal')">✖️</button></div>
+<p class="px-hint" id="reactWho"></p><div class="en-grid">${fld('rcDate','Nueva fecha de inscripción','date')}${fld('rcPrice','Precio mensual ($)','number')}${fld('rcDay','Día de pago (1-31)','number')}</div>
+<p class="px-hint">Si todo sigue igual que antes, solo pulsa Reactivar. Cambia fechas o valores si los padres lo acordaron distinto.</p>
+<div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeM('reactModal')">Cancelar</button><button class="modal-btn modal-btn-save" onclick="doReact()">✅ Reactivar</button></div></div></div>`);
+['inaModal','reactModal'].forEach(i=>$(i).addEventListener('click',e=>{if(e.target.id===i)closeM(i);}));
+function drawIna(){
+  const L=inaList().sort((a,b)=>(b.retDate||'').localeCompare(a.retDate||''));
+  $('inaList').innerHTML=L.map(s=>`<div class="px-row"><span><b>${esc(s.name)}</b><br><span class="px-hint">Retirado el ${s.retDate?longDate(s.retDate):'—'}${s.retiros&&s.retiros.length?' · ya se retiró antes '+s.retiros.length+' vez/veces':''}</span></span><span><button class="modal-btn modal-btn-cancel" onclick="closeM('inaModal');openStudentModal(${s.id})">📋 Datos y pagos</button> <button class="modal-btn modal-btn-save" onclick="openReact(${s.id})">↩️ Reactivar</button></span></div>`).join('')||'<div class="empty-notes">✨ No hay estudiantes inactivos.</div>';
+}
+function openIna(){drawIna();$('inaModal').classList.add('show');}
+function doRetire(s,date,fromPay){
+  s.retired=true;s.retDate=date||iso(new Date());s.notified='';
+  saveLocalData();renderTable();
+  if($('payModal').classList.contains('show'))renderPay();
+  closeStudentModal();showLockToast('🚪 '+s.name+' pasó a Inactivos'+(fromPay?' con su pago registrado':''));
+}
+function retireBtn(){
+  const s=curStu();if(!s)return;const d=($('spRetD')||{}).value||iso(new Date());
+  appConfirm('¿Retirar a '+s.name+' desde el '+longDate(d)+'? Dejará de contar en el calendario y pasará a Inactivos. Sus pagos y datos se conservan.',()=>doRetire(s,d),'Sí, retirar',{i:'🚪',t:'Retirar estudiante',w:'Podrás reactivarlo cuando regrese.',g:1});
+}
+let reactId=null;
+function openReact(id){
+  const s=appData.students.find(x=>x.id===id);if(!s)return;reactId=id;
+  $('reactWho').textContent=s.name+' · retirado el '+(s.retDate?longDate(s.retDate):'—');
+  $('rcDate').value=iso(new Date());$('rcPrice').value=(s.price!==''&&s.price!=null)?s.price:(appData.config.fee||'');$('rcDay').value=pday(s)||'';
+  $('reactModal').classList.add('show');
+}
+function doReact(){
+  const s=appData.students.find(x=>x.id===reactId);if(!s)return;
+  const dt=$('rcDate').value,day=Number($('rcDay').value),pr=$('rcPrice').value;
+  if(!dt){showLockToast('⚠️ Indica la nueva fecha de inscripción');return;}
+  if(!(day>=1&&day<=31)){showLockToast('⚠️ Indica el día de pago (1 a 31)');return;}
+  s.retiros=(s.retiros||[]).concat([{from:s.regDate||'',to:s.retDate||''}]);
+  s.reactFrom=s.retDate||'';s.retired=false;s.retDate='';s.regDate=dt;s.payDay=day;s.price=pr===''?'':Number(pr);s.paidUntil='';s.notified='';
+  saveLocalData();renderTable();closeM('reactModal');drawIna();if($('payModal').classList.contains('show'))renderPay();
+  if(currentStudentModalId===s.id)refreshStudentWin();showLockToast('✅ '+s.name+' está activo de nuevo');
 }
 </script>
 <script>
@@ -2595,7 +2651,7 @@ const safeUrl=u=>/^https?:\/\//i.test(String(u||'').trim())?String(u).trim():'';
 document.body.insertAdjacentHTML('beforeend','<div class="modal-overlay" id="typedModal"><div class="modal-content"><div class="mhead"><h3 class="modal-title" style="margin:0">⚠️ Confirmar</h3><button class="mx" onclick="closeM(\'typedModal\')">✖️</button></div><p class="px-hint" id="tpMsg"></p><input id="tpIn" type="text" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px;border:2px solid #E0D9FF;border-radius:14px"><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeM(\'typedModal\')">Cancelar</button><button class="modal-btn modal-btn-save" id="tpOk" disabled>Confirmar</button></div></div></div>');
 function askTyped(msg,word,cb){$('tpMsg').textContent=msg;const i=$('tpIn'),ok=$('tpOk');i.value='';ok.disabled=true;i.oninput=()=>{ok.disabled=i.value.trim().toLowerCase()!==String(word).trim().toLowerCase();};ok.onclick=()=>{closeM('typedModal');cb();};$('typedModal').classList.add('show');setTimeout(()=>i.focus(),50);}
 /* ---- Pagos: se anulan, nunca se borran ---- */
-const recalcPaid=sid=>{const s=appData.students.find(x=>x.id===sid);if(s)s.paidUntil=appData.pagos.filter(x=>x.sid===s.id&&x.type==='mes').map(x=>x.to).sort().pop()||'';};
+const recalcPaid=sid=>{const s=appData.students.find(x=>x.id===sid);if(s)s.paidUntil=paidUntilOf(s);};
 const afterPay=()=>{saveLocalData();renderTable();if($('payModal').classList.contains('show'))renderPay();if(currentStudentModalId!==null)renderStudentPay();};
 delPay=function(pid){const p0=appData.pagos.find(x=>x.id===pid);if(!p0)return;
   appConfirm('¿Anular el pago de '+p0.name+' por '+money(p0.amount)+'? No se elimina: queda guardado en «Pagos anulados» y lo puedes restaurar.',()=>{
@@ -2753,9 +2809,9 @@ function openGames(){GM_ALL=false;$('gamesModal').classList.add('show');drawGame
 const gState=c=>c.status==='revoked'?'⛔ Desactivado':(c.uid?'📱 Activo en 1 dispositivo · '+new Date(c.claimedAt||0).toLocaleDateString('es-CO'):'🟢 Libre');
 const STEAMA=[
  {k:'S',n:'Ciencia',c:'#E8497A',p:'#FFC2D4',s:['Biología','Física','Química','Historia','Geografía','Ciencias Sociales','Economía y Política']},
- {k:'T',n:'Tecnología',c:'#1FA3AD',p:'#B4EBEE',s:['Informática','Sistemas y Tecnología']},
- {k:'E',n:'Ingeniería',c:'#C98F00',p:'#FFE8A3',s:['Dibujo Técnico']},
- {k:'A',n:'Arte',c:'#E0602B',p:'#FFCDB3',s:['Lengua Castellana','Lectura Crítica','Inglés','Filosofía','Democracia y Constitución','Artes','Ética y Valores','Educación Religiosa','Cátedra de la Paz','Educación Física','Recreación y Deportes']},
+ {k:'T',n:'Tecnología',c:'#2B7FD1',p:'#BDE0FE',s:['Informática','Sistemas y Tecnología']},
+ {k:'E',n:'Ingeniería',c:'#1E9E73',p:'#C4F1DF',s:['Dibujo Técnico']},
+ {k:'A',n:'Arte',c:'#B58300',p:'#FFF1A8',s:['Lengua Castellana','Lectura Crítica','Inglés','Filosofía','Democracia y Constitución','Artes','Ética y Valores','Educación Religiosa','Cátedra de la Paz','Educación Física','Recreación y Deportes']},
  {k:'M',n:'Matemáticas',c:'#7A63E8',p:'#D5CBFF',s:['Aritmética','Álgebra','Trigonometría','Cálculo','Geometría','Estadística']}];
 const subsA=g=>Array.isArray(g.subs)?g.subs:(g.subj?[g.subj]:[]);
 const subDimA=x=>(STEAMA.find(d=>d.s.includes(x))||{});
@@ -2793,7 +2849,7 @@ async function drawGames(){
    +(kd.exists?'<div class="px-row ok"><span>🔑 Clave de los juegos guardada</span></div>':'<div class="px-row late"><span>⚠️ Falta la clave de los juegos</span></div><p class="px-hint">Pega la clave del archivo CLAVE_JUEGOS (una sola vez).</p><div class="en-grid">'+fld('gmK','Clave','text')+'</div><button class="modal-btn modal-btn-save" onclick="saveGameKey()">Guardar clave</button>')
    +'<h4 class="en-h">➕ Crear códigos</h4><div class="en-grid">'+fld('gmN','Cantidad (1 a 3)','number')+fld('gmL','Etiqueta (familia o nota)','text')+'</div><button class="modal-btn modal-btn-save" onclick="mkCodes()">Generar códigos</button><div id="gmNew"></div>'
    +dt('codes','🎟️ Códigos ('+L.length+' · '+activos+' activos)',(libres?'<button class="modal-btn modal-btn-cancel" onclick="delFreeCodes()">🧹 Eliminar todos los códigos libres ('+libres+')</button>':'')+(famHtml||'<div class="px-hint">Aún no hay códigos.</div>'),false)
-   +dt('games','🎮 Juegos publicados desde aquí ('+gl.length+')',gl.length?gl.map(g=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span><br>'+chips(g)+'</span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button></span></div>').join(''):'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>',false)
+   +dt('games','🎮 Juegos publicados desde aquí ('+gl.length+')',gamesByDim(gl),false)
    +dt('cov','🖼️ Carátulas de las fichas STEAM',coverHtml(cv),false)
    +dt('add',eg?'✏️ Editando: '+esc(eg.title):'➕ Agregar un juego nuevo','<p id="gmFormT" class="px-hint">'+(eg?'Cambia lo que necesites. Elige un archivo solo si quieres reemplazar el juego.':'1) Elige el archivo HTML del juego. 2) Escribe título y descripción. 3) Marca <b>todas</b> las asignaturas a las que pertenece (puede ser más de una, de varias dimensiones). 4) Pulsa «Publicar».')+'</p><input type="file" id="gmF" accept=".html,.htm,text/html"><input type="hidden" id="gmEid" value="'+esc(eg?eg.id:'')+'"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div><h4 class="en-h">🧭 ¿A qué asignaturas pertenece? (marca una o varias)</h4>'+clsBoxes(eg?subsA(eg):[])+'<button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="GM_EDIT=\'\';drawGames()">Limpiar</button><div id="gmPub"></div>',!!eg);
   if(eg){$('gmT').value=eg.title||'';$('gmD').value=eg.desc||'';$('gmE').value=eg.emoji||'';}
@@ -2861,6 +2917,28 @@ async function pubGame(){
   }catch(er){showLockToast('⚠️ '+(er.code||er.message));P.innerHTML='';}
 }
 
+
+/* Juegos agrupados por dimensión y asignatura (un juego puede verse en varias, pero es uno solo) */
+const gameRow=g=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span><br>'+chips(g)+'</span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button> <button class="btn-pend-del" onclick="delGame(\''+g.id+'\')">🗑️ Eliminar</button></span></div>';
+function gamesByDim(gl){
+  if(!gl.length)return'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>';
+  const S=[...gl].sort((a,b)=>(a.order||0)-(b.order||0));
+  const dims=STEAMA.map(d=>{
+    const inD=S.filter(g=>subsA(g).some(x=>d.s.includes(x)));if(!inD.length)return'';
+    const subs=d.s.map(x=>{const L=S.filter(g=>subsA(g).includes(x));return L.length?dt('gsub'+d.k+hk(x),'📚 '+esc(x)+' · '+L.length,L.map(gameRow).join(''),false):'';}).join('');
+    return dt('gdim'+d.k,'<span style="color:'+d.c+'">'+d.k+' · '+esc(d.n)+'</span> · '+inD.length+' juego'+(inD.length===1?'':'s'),subs,false);
+  }).join('');
+  const sin=S.filter(g=>!subsA(g).some(x=>subDimA(x).k));
+  return '<p class="px-hint">Cada lista se abre y se cierra. Si un juego pertenece a varias asignaturas se ve en todas, pero es un solo juego (no se duplica). Se ordenan por orden de cargue.</p>'+dims+(sin.length?dt('gdimNone','⚠️ Sin clasificar · '+sin.length,sin.map(gameRow).join(''),true):'');
+}
+function delGame(id){
+  appConfirm('¿Eliminar este juego por completo? Dejará de verse en todas sus asignaturas y se borra de la nube.',async()=>{
+    try{const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;
+      for(let i=0;i<(g.n||0);i++){try{await CL.db.doc('gamedata/'+g.id+'_'+g.v+'_'+i).delete();}catch(e){}}
+      await saveGameList(L.filter(x=>x.id!==id));GM_OPEN.games=true;showLockToast('🗑️ Juego eliminado');drawGames();
+    }catch(e){showLockToast('⚠️ '+(e.code||e.message));}
+  });
+}
 async function editGameF(id){GM_EDIT=id;GM_OPEN.add=true;await drawGames();const e=$('gmFormT');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth'});}
 async function toggleGame(id){const L=await loadGameList(),g=L.find(x=>x.id===id);if(!g)return;g.on=g.on===false;await saveGameList(L);drawGames();}
 async function moveGame(id,d){const L=(await loadGameList()).sort((a,b)=>(a.order||0)-(b.order||0)),i=L.findIndex(x=>x.id===id),j=i+d;if(i<0||j<0||j>=L.length)return;L.forEach((x,k)=>x.order=k+1);const t=L[i].order;L[i].order=L[j].order;L[j].order=t;await saveGameList(L);drawGames();}
