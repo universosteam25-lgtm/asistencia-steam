@@ -2828,7 +2828,7 @@ const resizeSq=file=>new Promise((ok,no)=>{const im=new Image(),u=URL.createObje
 async function setCover(k,inp){const f=inp.files[0];if(!f)return;try{const d=await resizeSq(f);await CL.db.doc('catalog/covers').set({[k]:d},{merge:true});GM_OPEN.cov=true;showLockToast('🖼️ Carátula actualizada');drawGames();}catch(e){showLockToast('⚠️ '+(e.message||e.code));}}
 async function delCover(k){try{await CL.db.doc('catalog/covers').set({[k]:''},{merge:true});GM_OPEN.cov=true;showLockToast('Carátula quitada');drawGames();}catch(e){showLockToast('⚠️ '+(e.code||e.message));}}
 const coverHtml=cv=>'<p class="px-hint">Es la imagen circular de cada ficha en la página de juegos. Se recorta al centro y se comprime sola.</p><div style="display:flex;flex-wrap:wrap;gap:14px">'+STEAMA.map(d=>'<div style="text-align:center;width:118px"><div style="width:86px;height:86px;border-radius:50%;margin:0 auto 6px;overflow:hidden;background:'+d.p+';display:flex;align-items:center;justify-content:center;font:700 38px Fredoka,sans-serif;color:'+d.c+';border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25)">'+(cv[d.k]?'<img src="'+esc(cv[d.k])+'" style="width:100%;height:100%;object-fit:cover">':d.k)+'</div><b style="font-size:12px">'+d.k+' · '+d.n+'</b><br><label class="modal-btn modal-btn-cancel" style="display:inline-block;cursor:pointer;font-size:12px;padding:4px 8px;margin-top:4px">🖼️ Cambiar<input type="file" accept="image/*" style="display:none" onchange="setCover(\''+d.k+'\',this)"></label>'+(cv[d.k]?' <button class="btn-pend-del" style="font-size:11px" onclick="delCover(\''+d.k+'\')">Quitar</button>':'')+'</div>').join('')+'</div>';
-const clsBoxes=sel=>STEAMA.map(d=>'<div class="cls-d" style="border-left:6px solid '+d.c+'"><b style="color:'+d.c+'">'+d.k+' · '+d.n+'</b><div class="cls-s">'+d.s.map(x=>'<label><input type="checkbox" class="gmCls" value="'+esc(x)+'" '+(sel.includes(x)?'checked':'')+'> '+esc(x)+'</label>').join('')+'</div></div>').join('');
+const clsBoxes=sel=>STEAMA.map(d=>'<div class="cls-d" style="border-left:6px solid '+d.c+';background:'+d.p+'"><b style="color:'+d.c+'">'+d.k+' · '+d.n+'</b><div class="cls-s">'+d.s.map(x=>'<label><input type="checkbox" class="gmCls" value="'+esc(x)+'" '+(sel.includes(x)?'checked':'')+'> '+esc(x)+'</label>').join('')+'</div></div>').join('');
 async function drawGames(){
   const B=$('gmBody');B.innerHTML='<div class="px-hint">Cargando…</div>';let kd,cs,gl,rq,cv;
   try{kd=await CL.db.doc('gamekey/master').get();cs=await CL.db.collection('codes').get();gl=await loadGameList();rq=await CL.db.collection('requests').get();const cd=await CL.db.doc('catalog/covers').get();cv=cd.exists?cd.data():{};try{const kc=await CL.db.doc('catalog/colors').get();colInit(kc.exists?kc.data():{});}catch(e){colInit({});}}
@@ -2851,7 +2851,7 @@ async function drawGames(){
    +dt('codes','🎟️ Códigos ('+L.length+' · '+activos+' activos)',(libres?'<button class="modal-btn modal-btn-cancel" onclick="delFreeCodes()">🧹 Eliminar todos los códigos libres ('+libres+')</button>':'')+(famHtml||'<div class="px-hint">Aún no hay códigos.</div>'),false)
    +dt('games','🎮 Juegos publicados desde aquí ('+gl.length+')',gamesByDim(gl),false)
    +dt('cov','🖼️ Carátulas y colores de las fichas STEAM',coverHtml(cv)+colorHtml(),false)
-   +dt('add',eg?'✏️ Editando: '+esc(eg.title):'➕ Agregar un juego nuevo','<p id="gmFormT" class="px-hint">'+(eg?'Cambia lo que necesites. Elige un archivo solo si quieres reemplazar el juego.':'1) Elige el archivo HTML del juego. 2) Escribe título y descripción. 3) Marca <b>todas</b> las asignaturas a las que pertenece (puede ser más de una, de varias dimensiones). 4) Pulsa «Publicar».')+'</p><input type="file" id="gmF" accept=".html,.htm,text/html"><input type="hidden" id="gmEid" value="'+esc(eg?eg.id:'')+'"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div><h4 class="en-h">🧭 ¿A qué asignaturas pertenece? (marca una o varias)</h4>'+clsBoxes(eg?subsA(eg):[])+'<button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="GM_EDIT=\'\';drawGames()">Limpiar</button><div id="gmPub"></div>',!!eg);
+   +dt('add',eg?'✏️ Editando: '+esc(eg.title):'➕ Agregar un juego nuevo','<p id="gmFormT" class="px-hint">'+(eg?'Cambia lo que necesites. Elige un archivo solo si quieres reemplazar el juego.':'1) Elige el archivo HTML del juego, un .zip o la carpeta completa del juego (con sus css, js e img): se empaqueta sola en un único archivo. 2) Escribe título y descripción. 3) Marca <b>todas</b> las asignaturas a las que pertenece (puede ser más de una, de varias dimensiones). 4) Pulsa «Publicar».')+'</p><input type="file" id="gmF" accept=".html,.htm,.zip,text/html,application/zip" onchange="if(this.files.length&&$(\'gmDir\'))$(\'gmDir\').value=\'\'"><p class="px-hint" style="margin:6px 0 2px">…o, si tu juego tiene carpetas (css, js, img…), elige la <b>carpeta completa</b> (en computador) o un <b>archivo .zip</b> con todo (sirve también en celular):</p><input type="file" id="gmDir" webkitdirectory multiple onchange="if(this.files.length)$(\'gmF\').value=\'\'"><input type="hidden" id="gmEid" value="'+esc(eg?eg.id:'')+'"><div class="en-grid">'+fld('gmT','Título del juego','text')+fld('gmD','Descripción corta','text')+fld('gmE','Emoji (opcional)','text')+'</div><h4 class="en-h">🧭 ¿A qué asignaturas pertenece? (marca una o varias)</h4>'+clsBoxes(eg?subsA(eg):[])+'<button class="modal-btn modal-btn-save" onclick="pubGame()">🚀 Publicar juego</button> <button class="modal-btn modal-btn-cancel" onclick="GM_EDIT=\'\';drawGames()">Limpiar</button><div id="gmPub"></div>',!!eg);
   if(eg){$('gmT').value=eg.title||'';$('gmD').value=eg.desc||'';$('gmE').value=eg.emoji||'';}
 }
 
@@ -2894,8 +2894,95 @@ const GCOL=['#9C88FF','#FF6B9D','#2BB7C9','#FF9F43','#5FD1D3','#6C5CE7'];
 async function loadGameList(){const d=await CL.db.doc('catalog/games').get();return d.exists?(d.data().list||[]):[];}
 const saveGameList=L=>CL.db.doc('catalog/games').set({list:L,updatedAt:Date.now()});
 const bytesB64=u8=>{let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);};
+/* ===== Juegos con carpetas (css, js, img…): se empaquetan en UN solo HTML antes de cifrar ===== */
+const MIMES={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',ico:'image/x-icon',bmp:'image/bmp',avif:'image/avif',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',aac:'audio/aac',mp4:'video/mp4',webm:'video/webm',json:'application/json',txt:'text/plain',csv:'text/csv',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',css:'text/css',js:'text/javascript',html:'text/html'};
+const extOf=p=>((p.split('?')[0].split('#')[0].match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+async function loadJSZip(){
+  if(window.JSZip)return window.JSZip;
+  await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el lector de ZIP: revisa tu internet'));document.head.appendChild(s);});
+  return window.JSZip;
+}
+const blobURL=b=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(new Error('No se pudo leer un archivo'));r.readAsDataURL(b);});
+async function bundleGame(recs,P){
+  const say=m=>{if(P)P.innerHTML='<div class="px-hint">'+esc(m)+'</div>';};
+  const FILES={};recs.forEach(r=>{FILES[r.p.toLowerCase()]=r;});
+  const used=new Set();
+  const dirOf=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')+1):'';
+  const isLocal=u=>u&&!/^(data:|blob:|https?:|\/\/|#|mailto:|tel:|javascript:|about:)/i.test(u.trim());
+  const resolve=(base,rel)=>{
+    rel=rel.trim().split('#')[0].split('?')[0];try{rel=decodeURIComponent(rel);}catch(e){}
+    let parts=(rel[0]==='/'?[]:dirOf(base).split('/').filter(Boolean)).concat(rel.split('/'));const out=[];
+    for(const x of parts){if(!x||x==='.')continue;if(x==='..')out.pop();else out.push(x);}
+    return out.join('/');
+  };
+  const find=(base,rel)=>{const p=resolve(base,rel);return FILES[p.toLowerCase()]?p.toLowerCase():null;};
+  const cache={};
+  async function uri(key){
+    if(cache[key])return cache[key];used.add(key);const r=FILES[key],b=await r.get(),t=MIMES[extOf(r.p)]||b.type||'application/octet-stream';
+    return cache[key]=await blobURL(new Blob([b],{type:t}));
+  }
+  async function txt(key){used.add(key);return await (await FILES[key].get()).text();}
+  async function asyncReplace(str,re,fn){const m=[...str.matchAll(re)],out=[];let last=0;for(const x of m){out.push(str.slice(last,x.index));out.push(await fn(...x));last=x.index+x[0].length;}out.push(str.slice(last));return out.join('');}
+  async function css(text,base){
+    text=await asyncReplace(text,/@import\s+(?:url\()?\s*(['"])([^'"]+)\1\s*\)?\s*;/gi,async(all,q,u)=>{const k=isLocal(u)&&find(base,u);return k?await css(await txt(k),k):all;});
+    return await asyncReplace(text,/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,async(all,q,u)=>{const k=isLocal(u)&&find(base,u);return k?'url("'+await uri(k)+'")':all;});
+  }
+  async function js(text,base){
+    return await asyncReplace(text,/(["'`])((?:\.{1,2}\/|\/)?[^"'`\n\\]{1,200}?\.(?:png|jpe?g|gif|webp|svg|ico|bmp|avif|mp3|wav|ogg|m4a|aac|mp4|webm|json|woff2?|ttf|otf|txt|csv))\1/gi,async(all,q,u)=>{const k=isLocal(u)&&find(base,u);return k?q+await uri(k)+q:all;});
+  }
+  const safeJs=t=>t.replace(/<\/script/gi,'<\\/script').replace(/<!--/g,'<\\!--');
+  const idx=Object.keys(FILES).filter(p=>/(^|\/)index\.html?$/.test(p)).sort((a,b)=>a.split('/').length-b.split('/').length)[0]||Object.keys(FILES).filter(p=>/\.html?$/.test(p))[0];
+  if(!idx)throw new Error('No encontré el archivo index.html dentro de lo que elegiste');
+  say('Empaquetando el juego…');
+  const base=idx;
+  const doc=new DOMParser().parseFromString(await txt(idx),'text/html');
+  for(const l of [...doc.querySelectorAll('link[href]')]){
+    const k=isLocal(l.getAttribute('href'))&&find(base,l.getAttribute('href'));if(!k)continue;
+    if(/stylesheet/i.test(l.rel)){const s=doc.createElement('style');s.textContent=await css(await txt(k),k);l.replaceWith(s);}
+    else l.setAttribute('href',await uri(k));
+  }
+  for(const s of [...doc.querySelectorAll('script')]){
+    const src=s.getAttribute('src');
+    if(src){const k=isLocal(src)&&find(base,src);if(!k)continue;const n=doc.createElement('script');[...s.attributes].forEach(a=>{if(a.name!=='src')n.setAttribute(a.name,a.value);});n.textContent=safeJs(await js(await txt(k),base));s.replaceWith(n);}
+    else if(s.textContent.trim())s.textContent=safeJs(await js(s.textContent,base));
+  }
+  for(const s of [...doc.querySelectorAll('style')])s.textContent=await css(s.textContent,base);
+  for(const e of [...doc.querySelectorAll('[style]')]){const v=e.getAttribute('style');if(/url\(/i.test(v))e.setAttribute('style',await css(v,base));}
+  for(const at of ['src','poster','data-src']){
+    for(const e of [...doc.querySelectorAll('['+at+']')]){if(e.tagName==='SCRIPT')continue;const u=e.getAttribute(at),k=isLocal(u)&&find(base,u);if(k)e.setAttribute(at,await uri(k));}
+  }
+  for(const e of [...doc.querySelectorAll('[srcset]')]){
+    const v=e.getAttribute('srcset').split(',').map(x=>x.trim()).filter(Boolean);const o=[];
+    for(const it of v){const [u,...r]=it.split(/\s+/),k=isLocal(u)&&find(base,u);o.push((k?await uri(k):u)+(r.length?' '+r.join(' '):''));}
+    e.setAttribute('srcset',o.join(', '));
+  }
+  const html='<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
+  const unused=Object.keys(FILES).filter(p=>!used.has(p)&&!/\.(html?|map|md|txt|log)$/i.test(p)&&!/(^|\/)\./.test(p));
+  const blob=new Blob([html],{type:'text/html'});
+  blob.bundleNote=unused.length?unused.length+' archivo(s) no se enlazaron solos (por ejemplo: '+unused.slice(0,3).join(', ')+'). Si el juego los arma por código, revisa que se vean bien.':'';
+  return blob;
+}
+async function gameSource(P){
+  const dir=$('gmDir')&&$('gmDir').files,a=$('gmF').files[0];let recs=null;
+  if(dir&&dir.length){
+    recs=[...dir].map(f=>({p:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,get:async()=>f}));
+    recs=recs.filter(r=>!/(^|\/)(\.DS_Store|Thumbs\.db)$/i.test(r.p));
+  }else if(a&&/\.zip$/i.test(a.name)){
+    const Z=await loadJSZip(),z=await Z.loadAsync(a),L=[];
+    z.forEach((p,e)=>{if(!e.dir&&!/^__MACOSX\//.test(p)&&!/(^|\/)(\.DS_Store|Thumbs\.db)$/i.test(p))L.push({p,e});});
+    const top=new Set(L.map(x=>x.p.split('/')[0])),strip=!L.some(x=>/^index\.html?$/i.test(x.p))&&top.size===1&&L.every(x=>x.p.includes('/'));
+    recs=L.map(x=>({p:strip?x.p.split('/').slice(1).join('/'):x.p,get:()=>x.e.async('blob')}));
+  }
+  if(!recs)return a||null;
+  const only=recs.length===1&&/\.html?$/i.test(recs[0].p);
+  const out=only?await recs[0].get():await bundleGame(recs,P);
+  if(out.bundleNote)showLockToast('⚠️ '+out.bundleNote);
+  return out;
+}
+
 async function pubGame(){
-  const f=$('gmF').files[0],eid=$('gmEid').value,t=$('gmT').value.trim(),d=$('gmD').value.trim(),e=$('gmE').value.trim()||'🎮',P=$('gmPub');
+  let f=null;const eid=$('gmEid').value,t=$('gmT').value.trim(),d=$('gmD').value.trim(),e=$('gmE').value.trim()||'🎮',P=$('gmPub');
+  try{f=await gameSource(P);}catch(er){showLockToast('⚠️ '+(er.message||er));P.innerHTML='';return;}
   const subs=[...document.querySelectorAll('.gmCls:checked')].map(x=>x.value);
   if(!t){showLockToast('⚠️ Escribe el título del juego');return;}if(!f&&!eid){showLockToast('⚠️ Elige el archivo HTML del juego');return;}
   if(!subs.length){showLockToast('⚠️ Marca al menos una asignatura (puedes marcar varias)');return;}
@@ -2919,17 +3006,17 @@ async function pubGame(){
 
 
 /* Juegos agrupados por dimensión y asignatura (un juego puede verse en varias, pero es uno solo) */
-const gameRow=g=>'<div class="px-row"><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span><br>'+chips(g)+'</span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button> <button class="btn-pend-del" onclick="delGame(\''+g.id+'\')">🗑️ Eliminar</button></span></div>';
+const gameRow=(g,dd)=>{const d=dd||subDimA(subsA(g)[0])||{};return '<div class="px-row"'+(d.p?' style="background:'+d.p+';border-left:6px solid '+d.c+'"':'')+'><span>'+esc(g.emoji||'🎮')+' <b>'+esc(g.title)+'</b>'+(g.on===false?' · <span class="px-hint">🙈 oculto</span>':'')+'<br><span class="px-hint">'+esc(g.desc||'')+' · '+Math.round((g.size||0)/1024)+' KB</span><br>'+chips(g)+'</span><span><button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',-1)">⬆️</button> <button class="modal-btn modal-btn-cancel" onclick="moveGame(\''+g.id+'\',1)">⬇️</button> <button class="modal-btn modal-btn-cancel" onclick="editGameF(\''+g.id+'\')">✏️ Editar</button> <button class="modal-btn modal-btn-cancel" onclick="toggleGame(\''+g.id+'\')">'+(g.on===false?'👁️ Mostrar':'🙈 Ocultar')+'</button> <button class="btn-pend-del" onclick="delGame(\''+g.id+'\')">🗑️ Eliminar</button></span></div>';};
 function gamesByDim(gl){
   if(!gl.length)return'<div class="px-hint">Aún no has publicado juegos desde aquí.</div>';
   const S=[...gl].sort((a,b)=>(a.order||0)-(b.order||0));
   const dims=STEAMA.map(d=>{
     const inD=S.filter(g=>subsA(g).some(x=>d.s.includes(x)));if(!inD.length)return'';
-    const subs=d.s.map(x=>{const L=S.filter(g=>subsA(g).includes(x));return L.length?dt('gsub'+d.k+hk(x),'📚 '+esc(x)+' · '+L.length,L.map(gameRow).join(''),false):'';}).join('');
+    const subs=d.s.map(x=>{const L=S.filter(g=>subsA(g).includes(x));return L.length?dt('gsub'+d.k+hk(x),'📚 '+esc(x)+' · '+L.length,L.map(g=>gameRow(g,d)).join(''),false):'';}).join('');
     return dt('gdim'+d.k,'<span style="color:'+d.c+'">'+d.k+' · '+esc(d.n)+'</span> · '+inD.length+' juego'+(inD.length===1?'':'s'),subs,false);
   }).join('');
   const sin=S.filter(g=>!subsA(g).some(x=>subDimA(x).k));
-  return '<p class="px-hint">Cada lista se abre y se cierra. Si un juego pertenece a varias asignaturas se ve en todas, pero es un solo juego (no se duplica). Se ordenan por orden de cargue.</p>'+dims+(sin.length?dt('gdimNone','⚠️ Sin clasificar · '+sin.length,sin.map(gameRow).join(''),true):'');
+  return '<p class="px-hint">Cada lista se abre y se cierra. Si un juego pertenece a varias asignaturas se ve en todas, pero es un solo juego (no se duplica). Se ordenan por orden de cargue.</p>'+dims+(sin.length?dt('gdimNone','⚠️ Sin clasificar · '+sin.length,sin.map(g=>gameRow(g)).join(''),true):'');
 }
 function delGame(id){
   appConfirm('¿Eliminar este juego por completo? Dejará de verse en todas sus asignaturas y se borra de la nube.',async()=>{
@@ -2998,8 +3085,8 @@ const resizeImg=file=>new Promise((ok,no)=>{const im=new Image(),u=URL.createObj
 const nurl=u=>{u=(u||'').trim();if(!u)return'';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const o=new URL(u);return(/^https?:$/.test(o.protocol)&&o.hostname.includes('.'))?o.href:null;}catch(e){return null;}};
 const TAS='width:100%;box-sizing:border-box;border:2px solid #E0D9FF;border-radius:14px;padding:10px;font-family:inherit';
 function campXHtml(){
-  return '<h4 class="en-h">🔗 Enlaces de los 5 donantes principales</h4><p class="px-hint">La imagen de la campaña se divide en <b>5 columnas</b>, de izquierda a derecha. Pon un donante por columna en tu collage (la imagen se ve mejor en proporción 2 de ancho por 1 de alto). Debajo de cada columna aparece un botón con el nombre y el enlace que escribas aquí (su empresa, redes o página). Deja vacía la columna que no uses.</p>'
-   +[0,1,2,3,4].map(i=>'<div class="en-grid">'+fld('cpLn'+i,'Columna '+(i+1)+' · nombre del botón','text')+fld('cpLu'+i,'Columna '+(i+1)+' · enlace (https://…)','url')+'</div>').join('')
+  return '<h4 class="en-h">🔗 Enlaces de los 5 donantes principales</h4><p class="px-hint">La imagen de la campaña se divide en <b>5 columnas</b>, de izquierda a derecha. Pon un donante por columna en tu collage (la imagen se ve mejor en proporción 2 de ancho por 1 de alto). Cada columna funciona como un <b>botón invisible</b> sobre esa parte de la imagen: quien toque la imagen la verá en pantalla completa y, al tocar la columna de un donante, se abrirá el enlace que escribas aquí (su empresa, redes o página). El nombre es solo una referencia (no se ve). Deja vacía la columna que no uses.</p>'
+   +[0,1,2,3,4].map(i=>'<div class="en-grid">'+fld('cpLn'+i,'Columna '+(i+1)+' · nombre del donante (referencia)','text')+fld('cpLu'+i,'Columna '+(i+1)+' · enlace (https://…)','url')+'</div>').join('')
    +'<h4 class="en-h">💜 Agradecimiento al terminar la campaña</h4><p class="px-hint">Cuando la campaña acabe: desmarca «Mostrar la campaña a los visitantes», marca el agradecimiento y pulsa el botón de guardar. Los visitantes verán tu mensaje y los nombres (con enlace si lo pones).</p>'
    +'<label class="px-hint" style="display:block;margin:6px 0"><input type="checkbox" id="cpTon"> Mostrar el agradecimiento a los visitantes</label>'
    +fld('cpTt','Título del agradecimiento','text')
